@@ -19,6 +19,7 @@ import DocGenerator from './DocGenerator';
 import VoiceControl from './VoiceControl';
 import TaskScheduler from './TaskScheduler';
 import LogViewer from './LogViewer';
+import Settings from './Settings';
 
 const AutonomousDashboard = ({ socket }) => {
   // Estado del agente
@@ -514,6 +515,16 @@ const AutonomousDashboard = ({ socket }) => {
         >
           📊 Logs
         </button>
+        <button
+          onClick={() => setActiveTab('settings')}
+          className={`px-6 py-3 font-semibold transition-all ${
+            activeTab === 'settings'
+              ? 'text-cyan-400 border-b-2 border-cyan-400'
+              : 'text-gray-400 hover:text-white'
+          }`}
+        >
+          ⚙️ Config
+        </button>
       </div>
 
       {/* Dashboard Tab */}
@@ -764,6 +775,11 @@ const AutonomousDashboard = ({ socket }) => {
       {/* Logs & Monitoring Tab */}
       {activeTab === 'logs' && (
         <LogViewer socket={socket} />
+      )}
+
+      {/* Settings Tab */}
+      {activeTab === 'settings' && (
+        <Settings socket={socket} />
       )}
     </div>
   );

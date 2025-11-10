@@ -40,6 +40,9 @@ const SchedulerIntegration = require('./scheduler-integration.cjs');
 // Logging Integration - Structured Logging & Monitoring
 const LoggingIntegration = require('./logging-integration.cjs');
 
+// Settings Integration - Configuration Manager
+const SettingsIntegration = require('./settings-integration.cjs');
+
 // Simple logger for engines
 const logger = {
   info: (msg) => console.log(msg),
@@ -1150,6 +1153,11 @@ io.on('connection', (socket) => {
   if (global.loggingIntegration) {
     global.loggingIntegration.setupSocketHandlers(socket);
   }
+
+  // Setup Settings socket handlers (will be initialized later)
+  if (global.settingsIntegration) {
+    global.settingsIntegration.setupSocketHandlers(socket);
+  }
 });
 
 // ===== ERROR HANDLING =====
@@ -1259,6 +1267,17 @@ server.listen(PORT, async () => {
     console.log('📝 Logging & Monitoring integrado con panel web');
   } catch (error) {
     console.error('❌ Error inicializando Logging:', error.message);
+  }
+
+  // ============ SETTINGS INTEGRATION ============
+  const settingsIntegration = new SettingsIntegration(io);
+  global.settingsIntegration = settingsIntegration; // Make available globally
+
+  try {
+    await settingsIntegration.initialize();
+    console.log('⚙️ Settings Manager integrado con panel web');
+  } catch (error) {
+    console.error('❌ Error inicializando Settings:', error.message);
   }
 
   // Graceful shutdown
