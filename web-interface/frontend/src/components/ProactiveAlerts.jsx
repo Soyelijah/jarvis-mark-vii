@@ -12,6 +12,7 @@ export default function ProactiveAlerts({ socket }) {
   });
   const [isExpanded, setIsExpanded] = useState(true);
   const [recentChanges, setRecentChanges] = useState([]);
+  const [fixingIssues, setFixingIssues] = useState(new Set());
 
   useEffect(() => {
     if (!socket) return;
@@ -109,6 +110,77 @@ export default function ProactiveAlerts({ socket }) {
     setTimeout(() => {
       setAlerts(prev => prev.filter(alert => alert.id !== alertId));
     }, 300);
+  };
+
+  const handleFixIt = async (filePath, issue, analysis) => {
+    const issueKey = `${filePath}:${issue.line}`;
+
+    // Evitar múltiples clicks
+    if (fixingIssues.has(issueKey)) {
+      console.log('Fix ya en progreso...');
+      return;
+    }
+
+    setFixingIssues(prev => new Set(prev).add(issueKey));
+
+    console.log('🔧 Solicitando fix:', issueKey);
+
+    // Solicitar fix al backend
+    socket.emit('proactive:apply-fix', {
+      filePath,
+      issue: {
+        ...issue,
+        type: determineIssueType(issue)
+      },
+      analysis
+    });
+
+    // Listener temporal para el resultado
+    const handleResult = (result) => {
+      if (result.success) {
+        console.log('✅ Fix aplicado:', result.changes);
+        alert(`✅ Fix aplicado exitosamente!\n\nCambios:\n${result.changes.map(c => `• Línea ${c.line}: ${c.description}`).join('\n')}`);
+      } else {
+        console.error('❌ Fix falló:', result.reason);
+        alert(`❌ No se pudo aplicar el fix:\n${result.reason}`);
+      }
+
+      setFixingIssues(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(issueKey);
+        return newSet;
+      });
+
+      socket.off('proactive:fix-result', handleResult);
+    };
+
+    socket.on('proactive:fix-result', handleResult);
+
+    // Timeout de 10 segundos
+    setTimeout(() => {
+      if (fixingIssues.has(issueKey)) {
+        setFixingIssues(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(issueKey);
+          return newSet;
+        });
+        socket.off('proactive:fix-result', handleResult);
+      }
+    }, 10000);
+  };
+
+  const determineIssueType = (issue) => {
+    const text = (issue.description || issue.issue || issue.problem || '').toLowerCase();
+
+    if (text.includes('eval')) return 'eval-usage';
+    if (text.includes('sql')) return 'sql-injection';
+    if (text.includes('xss') || text.includes('innerhtml')) return 'xss-vulnerability';
+    if (text.includes('loop') || text.includes('o(n')) return 'inefficient-loop';
+    if (text.includes('null') || text.includes('undefined')) return 'null-reference';
+    if (text.includes('await')) return 'missing-await';
+    if (text.includes('error') || text.includes('catch')) return 'missing-error-handling';
+
+    return 'generic';
   };
 
   const getPriorityColor = (priority) => {
@@ -253,8 +325,19 @@ export default function ProactiveAlerts({ socket }) {
                           <div>
                             <div className="font-bold text-red-300">🔒 Security ({alert.analysis.security.length})</div>
                             {alert.analysis.security.slice(0, 2).map((issue, idx) => (
-                              <div key={idx} className="text-xs text-gray-300 ml-4 mt-1">
-                                • Línea {issue.line}: {issue.issue}
+                              <div key={idx} className="ml-4 mt-1">
+                                <div className="text-xs text-gray-300 flex items-center justify-between gap-2">
+                                  <span>• Línea {issue.line}: {issue.issue}</span>
+                                  <button
+                                    onClick={() => handleFixIt(alert.path, issue, alert.analysis)}
+                                    className="bg-green-600 hover:bg-green-500 text-white text-xs px-2 py-1 rounded transition-colors flex items-center gap-1"
+                                  >
+                                    🔧 Fix It
+                                  </button>
+                                </div>
+                                {issue.fix && (
+                                  <div className="text-xs text-gray-400 ml-4 mt-0.5">➜ {issue.fix}</div>
+                                )}
                               </div>
                             ))}
                           </div>
@@ -264,8 +347,19 @@ export default function ProactiveAlerts({ socket }) {
                           <div>
                             <div className="font-bold text-orange-300">🐛 Bugs ({alert.analysis.bugs.length})</div>
                             {alert.analysis.bugs.slice(0, 2).map((bug, idx) => (
-                              <div key={idx} className="text-xs text-gray-300 ml-4 mt-1">
-                                • Línea {bug.line}: {bug.description}
+                              <div key={idx} className="ml-4 mt-1">
+                                <div className="text-xs text-gray-300 flex items-center justify-between gap-2">
+                                  <span>• Línea {bug.line}: {bug.description}</span>
+                                  <button
+                                    onClick={() => handleFixIt(alert.path, bug, alert.analysis)}
+                                    className="bg-green-600 hover:bg-green-500 text-white text-xs px-2 py-1 rounded transition-colors flex items-center gap-1"
+                                  >
+                                    🔧 Fix It
+                                  </button>
+                                </div>
+                                {bug.suggestion && (
+                                  <div className="text-xs text-gray-400 ml-4 mt-0.5">➜ {bug.suggestion}</div>
+                                )}
                               </div>
                             ))}
                           </div>
@@ -275,8 +369,19 @@ export default function ProactiveAlerts({ socket }) {
                           <div>
                             <div className="font-bold text-yellow-300">⚡ Performance ({alert.analysis.performance.length})</div>
                             {alert.analysis.performance.slice(0, 2).map((perf, idx) => (
-                              <div key={idx} className="text-xs text-gray-300 ml-4 mt-1">
-                                • Línea {perf.line}: {perf.problem}
+                              <div key={idx} className="ml-4 mt-1">
+                                <div className="text-xs text-gray-300 flex items-center justify-between gap-2">
+                                  <span>• Línea {perf.line}: {perf.problem}</span>
+                                  <button
+                                    onClick={() => handleFixIt(alert.path, perf, alert.analysis)}
+                                    className="bg-green-600 hover:bg-green-500 text-white text-xs px-2 py-1 rounded transition-colors flex items-center gap-1"
+                                  >
+                                    🔧 Fix It
+                                  </button>
+                                </div>
+                                {perf.solution && (
+                                  <div className="text-xs text-gray-400 ml-4 mt-0.5">➜ {perf.solution}</div>
+                                )}
                               </div>
                             ))}
                           </div>

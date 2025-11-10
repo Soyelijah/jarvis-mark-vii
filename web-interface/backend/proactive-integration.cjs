@@ -3,11 +3,13 @@
 
 const path = require('path');
 const ProactiveAgent = require('../../core/proactive/proactive-agent.cjs');
+const FixEngine = require('../../core/proactive/fix-engine.cjs');
 
 class ProactiveIntegration {
   constructor(io, options = {}) {
     this.io = io;
     this.proactiveAgent = null;
+    this.fixEngine = null;
     this.isEnabled = options.enabled !== false;
     this.projectRoot = options.projectRoot || path.resolve(__dirname, '../..');
 
@@ -33,6 +35,12 @@ class ProactiveIntegration {
     }
 
     console.log('🚀 [Proactive Integration] Inicializando...');
+
+    // Crear Fix Engine
+    this.fixEngine = new FixEngine({
+      projectRoot: this.projectRoot,
+      dryRun: false // Aplicar fixes reales
+    });
 
     // Crear Proactive Agent
     this.proactiveAgent = new ProactiveAgent({
@@ -181,6 +189,52 @@ class ProactiveIntegration {
 
         // Confirmar a todos los clientes
         this.broadcastToAll('proactive:config-updated', config);
+      });
+
+      // Listen: Cliente solicita aplicar fix
+      socket.on('proactive:apply-fix', async (data) => {
+        console.log(`🔧 [Proactive Integration] Fix solicitado: ${data.filePath}:${data.issue.line}`);
+
+        try {
+          const result = await this.fixEngine.applyFix(
+            data.filePath,
+            data.issue,
+            data.analysis
+          );
+
+          if (result.success) {
+            console.log(`✅ [Proactive Integration] Fix aplicado exitosamente`);
+
+            // Notificar a todos los clientes
+            this.broadcastToAll('proactive:fix-applied', {
+              filePath: data.filePath,
+              issue: data.issue,
+              changes: result.changes,
+              timestamp: Date.now()
+            });
+
+            socket.emit('proactive:fix-result', {
+              success: true,
+              changes: result.changes,
+              message: 'Fix aplicado exitosamente',
+              timestamp: Date.now()
+            });
+          } else {
+            socket.emit('proactive:fix-result', {
+              success: false,
+              reason: result.reason,
+              message: `No se pudo aplicar fix: ${result.reason}`,
+              timestamp: Date.now()
+            });
+          }
+        } catch (error) {
+          console.error(`❌ [Proactive Integration] Error aplicando fix:`, error);
+
+          socket.emit('proactive:error', {
+            message: `Error aplicando fix: ${error.message}`,
+            timestamp: Date.now()
+          });
+        }
       });
 
       // Disconnect
