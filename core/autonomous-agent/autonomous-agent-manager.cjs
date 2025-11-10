@@ -7,6 +7,7 @@ const SelfVerification = require('./self-verification.cjs');
 const WebIntelligenceManager = require('../web-intelligence/web-intelligence-manager.cjs');
 const MemoryManager = require('../neural-memory/memory-manager.cjs');
 const AIAnalyzer = require('../proactive/ai-analyzer.cjs');
+const MetricsPersistence = require('../metrics-persistence.cjs');
 const { EventEmitter } = require('events');
 
 /**
@@ -62,6 +63,9 @@ class AutonomousAgentManager extends EventEmitter {
       aiAnalyzer: this.aiAnalyzer
     });
 
+    // Sistema de persistencia
+    this.metricsPersistence = new MetricsPersistence();
+
     // Estado del agente
     this.state = 'idle'; // idle, planning, executing, verifying, completed, failed
     this.currentTask = null;
@@ -85,6 +89,7 @@ class AutonomousAgentManager extends EventEmitter {
 
     await this.memoryManager.initialize();
     await this.webIntelligence.initialize();
+    this.metricsPersistence.initialize();
 
     console.log('✅ [Autonomous Agent] Sistema listo para trabajar autónomamente');
     this.emit('ready');
@@ -295,6 +300,19 @@ class AutonomousAgentManager extends EventEmitter {
           score: summary.averageScore
         },
         importance: 1.0 // Máxima importancia
+      });
+
+      // Guardar sesión en persistencia (SQLite)
+      const sessionId = `session_${Date.now()}`;
+      this.metricsPersistence.saveSession({
+        id: sessionId,
+        timestamp: Date.now(),
+        task: taskDescription,
+        state: 'completed',
+        duration,
+        plan: this.currentPlan,
+        summary,
+        results: this.sessionResults
       });
 
       return {
@@ -562,24 +580,40 @@ Por favor genera un plan de corrección en formato JSON:
    * Obtiene estadísticas globales
    */
   async getStats() {
-    const memories = await this.memoryManager.recall('autonomous-session', 100);
-
-    const sessions = memories.filter(m => m.type === 'autonomous-session');
-    const successfulSessions = sessions.filter(m => m.content.summary.failed === 0);
+    // Usar persistencia en lugar de memoria para stats más precisos
+    const stats = this.metricsPersistence.getGlobalStats();
 
     return {
-      totalSessions: sessions.length,
-      successfulSessions: successfulSessions.length,
-      failureRate: sessions.length > 0
-        ? ((sessions.length - successfulSessions.length) / sessions.length * 100).toFixed(1)
-        : 0,
-      averageScore: sessions.length > 0
-        ? Math.round(sessions.reduce((sum, s) => sum + (s.content.summary.averageScore || 0), 0) / sessions.length)
-        : 0,
-      totalSubtasksCompleted: sessions.reduce((sum, s) => sum + s.content.summary.successful, 0),
+      ...stats,
       webIntelligenceStats: this.webIntelligence.getStats(),
       memoryStats: this.memoryManager.getStats()
     };
+  }
+
+  /**
+   * Obtiene el historial completo de sesiones
+   * @param {Object} options - Opciones de filtrado
+   * @returns {Array} - Array de sesiones
+   */
+  getSessionHistory(options = {}) {
+    return this.metricsPersistence.getSessionHistory(options);
+  }
+
+  /**
+   * Obtiene una sesión específica por ID
+   * @param {string} sessionId - ID de la sesión
+   * @returns {Object|null} - Sesión o null
+   */
+  getSession(sessionId) {
+    return this.metricsPersistence.getSession(sessionId);
+  }
+
+  /**
+   * Limpia datos antiguos según políticas de retención
+   * @param {Object} retention - Políticas de retención en días
+   */
+  cleanOldData(retention = {}) {
+    return this.metricsPersistence.cleanOldData(retention);
   }
 }
 
