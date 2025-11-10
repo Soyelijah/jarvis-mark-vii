@@ -20,6 +20,7 @@ import VoiceControl from './VoiceControl';
 import TaskScheduler from './TaskScheduler';
 import LogViewer from './LogViewer';
 import Settings from './Settings';
+import BackupManager from './BackupManager';
 
 const AutonomousDashboard = ({ socket }) => {
   // Estado del agente
@@ -525,6 +526,16 @@ const AutonomousDashboard = ({ socket }) => {
         >
           ⚙️ Config
         </button>
+        <button
+          onClick={() => setActiveTab('backup')}
+          className={`px-6 py-3 font-semibold transition-all ${
+            activeTab === 'backup'
+              ? 'text-cyan-400 border-b-2 border-cyan-400'
+              : 'text-gray-400 hover:text-white'
+          }`}
+        >
+          💾 Backup
+        </button>
       </div>
 
       {/* Dashboard Tab */}
@@ -780,6 +791,11 @@ const AutonomousDashboard = ({ socket }) => {
       {/* Settings Tab */}
       {activeTab === 'settings' && (
         <Settings socket={socket} />
+      )}
+
+      {/* Backup Tab */}
+      {activeTab === 'backup' && (
+        <BackupManager socket={socket} />
       )}
     </div>
   );

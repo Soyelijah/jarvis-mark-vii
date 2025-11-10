@@ -43,6 +43,9 @@ const LoggingIntegration = require('./logging-integration.cjs');
 // Settings Integration - Configuration Manager
 const SettingsIntegration = require('./settings-integration.cjs');
 
+// Backup Integration - Backup & Disaster Recovery
+const BackupIntegration = require('./backup-integration.cjs');
+
 // Simple logger for engines
 const logger = {
   info: (msg) => console.log(msg),
@@ -1158,6 +1161,11 @@ io.on('connection', (socket) => {
   if (global.settingsIntegration) {
     global.settingsIntegration.setupSocketHandlers(socket);
   }
+
+  // Setup Backup socket handlers (will be initialized later)
+  if (global.backupIntegration) {
+    global.backupIntegration.setupSocketHandlers(socket);
+  }
 });
 
 // ===== ERROR HANDLING =====
@@ -1278,6 +1286,17 @@ server.listen(PORT, async () => {
     console.log('⚙️ Settings Manager integrado con panel web');
   } catch (error) {
     console.error('❌ Error inicializando Settings:', error.message);
+  }
+
+  // ============ BACKUP INTEGRATION ============
+  const backupIntegration = new BackupIntegration(io);
+  global.backupIntegration = backupIntegration; // Make available globally
+
+  try {
+    await backupIntegration.initialize();
+    console.log('💾 Backup & Recovery integrado con panel web');
+  } catch (error) {
+    console.error('❌ Error inicializando Backup:', error.message);
   }
 
   // Graceful shutdown
