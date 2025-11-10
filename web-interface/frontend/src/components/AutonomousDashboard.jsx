@@ -13,6 +13,7 @@ import MetricsChart, {
 } from './MetricsChart';
 import SessionHistory from './SessionHistory';
 import ReportsViewer from './ReportsViewer';
+import NotificationCenter from './NotificationCenter';
 
 const AutonomousDashboard = ({ socket }) => {
   // Estado del agente
@@ -364,6 +365,9 @@ const AutonomousDashboard = ({ socket }) => {
 
   return (
     <div className="autonomous-dashboard p-6 space-y-6">
+      {/* Notification Center (floating) */}
+      <NotificationCenter socket={socket} />
+
       {/* Header */}
       <div className="bg-gradient-to-r from-blue-900 to-cyan-900 rounded-lg p-6 shadow-xl">
         <div className="flex items-center justify-between">

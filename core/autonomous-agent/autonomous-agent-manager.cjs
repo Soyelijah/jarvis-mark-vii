@@ -9,6 +9,7 @@ const MemoryManager = require('../neural-memory/memory-manager.cjs');
 const AIAnalyzer = require('../proactive/ai-analyzer.cjs');
 const MetricsPersistence = require('../metrics-persistence.cjs');
 const MaintenanceScheduler = require('../maintenance-scheduler.cjs');
+const NotificationSystem = require('../notification-system.cjs');
 const { EventEmitter } = require('events');
 
 /**
@@ -80,6 +81,14 @@ class AutonomousAgentManager extends EventEmitter {
       reportsEnabled: options.reportsEnabled !== false
     });
 
+    // Sistema de notificaciones
+    this.notificationSystem = new NotificationSystem({
+      projectRoot: this.projectRoot,
+      metricsPersistence: this.metricsPersistence,
+      maxNotifications: options.maxNotifications || 100,
+      retentionDays: options.notificationRetentionDays || 30
+    });
+
     // Estado del agente
     this.state = 'idle'; // idle, planning, executing, verifying, completed, failed
     this.currentTask = null;
@@ -105,8 +114,17 @@ class AutonomousAgentManager extends EventEmitter {
     await this.webIntelligence.initialize();
     this.metricsPersistence.initialize();
 
-    // Iniciar mantenimiento automático
+    // Iniciar sistemas automáticos
     this.maintenanceScheduler.start();
+    await this.notificationSystem.initialize();
+
+    // Notificación de inicio
+    await this.notificationSystem.notify({
+      priority: 'success',
+      category: 'system',
+      title: 'JARVIS Inicializado',
+      message: 'Sistema autónomo listo para trabajar'
+    });
 
     console.log('✅ [Autonomous Agent] Sistema listo para trabajar autónomamente');
     this.emit('ready');
@@ -138,6 +156,19 @@ class AutonomousAgentManager extends EventEmitter {
       this.emit('task:planned', {
         plan: this.currentPlan,
         subtaskCount: this.currentPlan.subtasks.length
+      });
+
+      // Notificación de planificación
+      await this.notificationSystem.notify({
+        priority: 'info',
+        category: 'task',
+        title: 'Tarea Planificada',
+        message: `${this.currentPlan.subtasks.length} sub-tareas creadas para: ${taskDescription.substring(0, 50)}...`,
+        data: {
+          subtaskCount: this.currentPlan.subtasks.length,
+          estimatedTime: this.currentPlan.estimation.estimatedTimeHours,
+          complexity: this.currentPlan.estimation.overallComplexity
+        }
       });
 
       // Guardar plan en memoria
@@ -215,6 +246,19 @@ class AutonomousAgentManager extends EventEmitter {
             score: verificationResult.score
           });
 
+          // Notificación de sub-tarea exitosa
+          await this.notificationSystem.notify({
+            priority: 'success',
+            category: 'task',
+            title: `Sub-tarea ${i + 1}/${this.currentPlan.subtasks.length} Completada`,
+            message: subtask.title,
+            data: {
+              subtaskId: subtask.id,
+              score: verificationResult.score,
+              type: subtask.type
+            }
+          });
+
           this.emit('subtask:success', {
             subtask,
             index: i + 1,
@@ -268,6 +312,19 @@ class AutonomousAgentManager extends EventEmitter {
               issues: verificationResult.issues
             });
 
+            // Notificación de error
+            await this.notificationSystem.notify({
+              priority: 'error',
+              category: 'task',
+              title: `Error en Sub-tarea ${i + 1}`,
+              message: `Falló: ${subtask.title}`,
+              data: {
+                subtaskId: subtask.id,
+                score: verificationResult.score,
+                issues: verificationResult.issues
+              }
+            });
+
             // Pausar si está configurado
             if (this.pauseOnVerificationFailure) {
               console.log('⏸️ Pausando ejecución por falla en verificación');
@@ -294,6 +351,20 @@ class AutonomousAgentManager extends EventEmitter {
       console.log(`📊 Score promedio: ${summary.averageScore}%\n`);
 
       this.state = 'completed';
+
+      // Notificación de tarea completada
+      await this.notificationSystem.notify({
+        priority: summary.failed > 0 ? 'warning' : 'success',
+        category: 'task',
+        title: 'Tarea Completada',
+        message: `${summary.successful}/${summary.total} sub-tareas exitosas en ${duration}s`,
+        data: {
+          taskDescription,
+          duration,
+          summary
+        }
+      });
+
       this.emit('task:complete', {
         taskDescription,
         duration,
@@ -345,6 +416,20 @@ class AutonomousAgentManager extends EventEmitter {
       console.error(`\n💥 [Autonomous Agent] Error fatal: ${error.message}\n`);
 
       this.state = 'failed';
+
+      // Notificación de error crítico
+      await this.notificationSystem.notify({
+        priority: 'critical',
+        category: 'error',
+        title: 'Tarea Fallida',
+        message: `Error: ${error.message}`,
+        data: {
+          taskDescription,
+          error: error.message,
+          results: this.sessionResults
+        }
+      });
+
       this.emit('task:failed', {
         taskDescription,
         error: error.message,
@@ -702,6 +787,42 @@ Por favor genera un plan de corrección en formato JSON:
 
     const content = require('fs').readFileSync(reportPath, 'utf8');
     return JSON.parse(content);
+  }
+
+  /**
+   * Métodos del sistema de notificaciones
+   */
+
+  getNotifications(options) {
+    return this.notificationSystem.getNotifications(options);
+  }
+
+  getNotificationStats() {
+    return this.notificationSystem.getStats();
+  }
+
+  getNotificationPreferences() {
+    return this.notificationSystem.getPreferences();
+  }
+
+  updateNotificationPreferences(updates) {
+    return this.notificationSystem.updatePreferences(updates);
+  }
+
+  markNotificationAsRead(notificationId) {
+    return this.notificationSystem.markAsRead(notificationId);
+  }
+
+  markAllNotificationsAsRead() {
+    return this.notificationSystem.markAllAsRead();
+  }
+
+  dismissNotification(notificationId) {
+    return this.notificationSystem.dismiss(notificationId);
+  }
+
+  dismissAllNotifications() {
+    return this.notificationSystem.dismissAll();
   }
 }
 

@@ -39,6 +39,27 @@ class AutonomousIntegration {
    * Setup event forwarding del agente a Socket.io
    */
   setupEventForwarding() {
+    // Notification events
+    this.agent.notificationSystem.on('notification', (notification) => {
+      this.io.emit('notification:new', notification);
+    });
+
+    this.agent.notificationSystem.on('notification:read', (notification) => {
+      this.io.emit('notification:read', notification);
+    });
+
+    this.agent.notificationSystem.on('notifications:all-read', () => {
+      this.io.emit('notification:all-read');
+    });
+
+    this.agent.notificationSystem.on('notification:dismissed', (notification) => {
+      this.io.emit('notification:dismissed', notification);
+    });
+
+    this.agent.notificationSystem.on('notifications:all-dismissed', () => {
+      this.io.emit('notification:all-dismissed');
+    });
+
     // Task events
     this.agent.on('task:start', (data) => {
       this.currentTask = data.taskDescription;
@@ -380,6 +401,126 @@ class AutonomousIntegration {
 
         const status = this.agent.getMaintenanceStatus();
         socket.emit('maintenance:status', status);
+      } catch (error) {
+        socket.emit('autonomous:error', {
+          message: error.message
+        });
+      }
+    });
+
+    // =============== NOTIFICATIONS ===============
+
+    // Obtener notificaciones
+    socket.on('notifications:get', (options) => {
+      try {
+        if (!this.isInitialized) {
+          socket.emit('notifications:list', []);
+          return;
+        }
+
+        const notifications = this.agent.getNotifications(options || {});
+        socket.emit('notifications:list', notifications);
+      } catch (error) {
+        socket.emit('autonomous:error', {
+          message: error.message
+        });
+      }
+    });
+
+    // Obtener estadísticas de notificaciones
+    socket.on('notifications:get-stats', () => {
+      try {
+        if (!this.isInitialized) {
+          socket.emit('notifications:stats', { total: 0, unread: 0 });
+          return;
+        }
+
+        const stats = this.agent.getNotificationStats();
+        socket.emit('notifications:stats', stats);
+      } catch (error) {
+        socket.emit('autonomous:error', {
+          message: error.message
+        });
+      }
+    });
+
+    // Marcar notificación como leída
+    socket.on('notifications:mark-read', (notificationId) => {
+      try {
+        if (this.isInitialized) {
+          this.agent.markNotificationAsRead(notificationId);
+        }
+      } catch (error) {
+        socket.emit('autonomous:error', {
+          message: error.message
+        });
+      }
+    });
+
+    // Marcar todas como leídas
+    socket.on('notifications:mark-all-read', () => {
+      try {
+        if (this.isInitialized) {
+          this.agent.markAllNotificationsAsRead();
+        }
+      } catch (error) {
+        socket.emit('autonomous:error', {
+          message: error.message
+        });
+      }
+    });
+
+    // Descartar notificación
+    socket.on('notifications:dismiss', (notificationId) => {
+      try {
+        if (this.isInitialized) {
+          this.agent.dismissNotification(notificationId);
+        }
+      } catch (error) {
+        socket.emit('autonomous:error', {
+          message: error.message
+        });
+      }
+    });
+
+    // Descartar todas las notificaciones
+    socket.on('notifications:dismiss-all', () => {
+      try {
+        if (this.isInitialized) {
+          this.agent.dismissAllNotifications();
+        }
+      } catch (error) {
+        socket.emit('autonomous:error', {
+          message: error.message
+        });
+      }
+    });
+
+    // Obtener preferencias de notificaciones
+    socket.on('notifications:get-preferences', () => {
+      try {
+        if (!this.isInitialized) {
+          socket.emit('notifications:preferences', {});
+          return;
+        }
+
+        const preferences = this.agent.getNotificationPreferences();
+        socket.emit('notifications:preferences', preferences);
+      } catch (error) {
+        socket.emit('autonomous:error', {
+          message: error.message
+        });
+      }
+    });
+
+    // Actualizar preferencias de notificaciones
+    socket.on('notifications:update-preferences', (updates) => {
+      try {
+        if (this.isInitialized) {
+          this.agent.updateNotificationPreferences(updates);
+          const preferences = this.agent.getNotificationPreferences();
+          socket.emit('notifications:preferences', preferences);
+        }
       } catch (error) {
         socket.emit('autonomous:error', {
           message: error.message
