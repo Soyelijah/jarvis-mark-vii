@@ -13,6 +13,7 @@ export default function ProactiveAlerts({ socket }) {
   const [isExpanded, setIsExpanded] = useState(true);
   const [recentChanges, setRecentChanges] = useState([]);
   const [fixingIssues, setFixingIssues] = useState(new Set());
+  const [pendingCommit, setPendingCommit] = useState(null);
 
   useEffect(() => {
     if (!socket) return;
@@ -73,6 +74,25 @@ export default function ProactiveAlerts({ socket }) {
       });
     });
 
+    // Listen: Git commit pending (requires approval)
+    socket.on('git:commit-pending', (data) => {
+      console.log('📝 Git commit pending approval:', data);
+      setPendingCommit(data);
+    });
+
+    // Listen: Git commit created
+    socket.on('git:commit-created', (data) => {
+      console.log('✅ Git commit created:', data);
+      setPendingCommit(null);
+      alert(`✅ Commit creado exitosamente!\n\n${data.fixes} fixes aplicados en ${data.files.length} archivos.`);
+    });
+
+    // Listen: Git commit rejected
+    socket.on('git:commit-rejected', (data) => {
+      console.log('❌ Git commit rejected');
+      setPendingCommit(null);
+    });
+
     // Cleanup
     return () => {
       socket.off('proactive:ready');
@@ -80,6 +100,9 @@ export default function ProactiveAlerts({ socket }) {
       socket.off('proactive:analysis-complete');
       socket.off('proactive:alert');
       socket.off('proactive:stats');
+      socket.off('git:commit-pending');
+      socket.off('git:commit-created');
+      socket.off('git:commit-rejected');
     };
   }, [socket]);
 
@@ -110,6 +133,26 @@ export default function ProactiveAlerts({ socket }) {
     setTimeout(() => {
       setAlerts(prev => prev.filter(alert => alert.id !== alertId));
     }, 300);
+  };
+
+  const handleApproveCommit = () => {
+    console.log('✅ Aprobando commit...');
+    socket.emit('git:approve-commit');
+
+    // Listen for result
+    socket.once('git:commit-result', (result) => {
+      if (result.success) {
+        console.log('✅ Commit creado exitosamente');
+      } else {
+        console.error('❌ Error creando commit:', result.reason);
+        alert(`❌ Error creando commit:\n${result.reason}`);
+      }
+    });
+  };
+
+  const handleRejectCommit = () => {
+    console.log('❌ Rechazando commit...');
+    socket.emit('git:reject-commit');
   };
 
   const handleFixIt = async (filePath, issue, analysis) => {
@@ -417,6 +460,97 @@ export default function ProactiveAlerts({ socket }) {
         </div>
       )}
 
+      {/* Git Commit Approval Modal */}
+      {pendingCommit && (
+        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 animate-fade-in">
+          <div className="bg-gray-800 rounded-lg border-2 border-green-500 shadow-2xl max-w-3xl w-full mx-4 max-h-[80vh] overflow-hidden animate-scale-in">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-green-900 to-blue-900 p-4 border-b border-green-600">
+              <div className="flex items-center gap-3">
+                <span className="text-3xl">🤖</span>
+                <div>
+                  <h3 className="text-xl font-bold text-white">Aprobación de Commit Requerida</h3>
+                  <p className="text-sm text-gray-300">Fixes automáticos listos para commit</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 overflow-y-auto max-h-[60vh]">
+              {/* Summary */}
+              <div className="bg-blue-900 bg-opacity-40 rounded-lg p-4 mb-4 border border-blue-600">
+                <div className="text-sm text-blue-200 mb-2">
+                  📊 <strong>{pendingCommit.fixes.length}</strong> fixes aplicados en{' '}
+                  <strong>{pendingCommit.filesAffected.length}</strong> archivo{pendingCommit.filesAffected.length > 1 ? 's' : ''}
+                </div>
+              </div>
+
+              {/* Commit Message Preview */}
+              <div className="bg-gray-900 rounded-lg p-4 mb-4 border border-gray-700">
+                <div className="text-xs text-gray-400 mb-2 uppercase font-semibold">Mensaje de commit:</div>
+                <pre className="text-sm text-gray-200 whitespace-pre-wrap font-mono">
+                  {pendingCommit.message}
+                </pre>
+              </div>
+
+              {/* Files Affected */}
+              <div className="bg-gray-900 rounded-lg p-4 border border-gray-700">
+                <div className="text-xs text-gray-400 mb-2 uppercase font-semibold">
+                  Archivos modificados:
+                </div>
+                <div className="space-y-1">
+                  {pendingCommit.filesAffected.map((file, idx) => (
+                    <div key={idx} className="text-sm text-green-400 font-mono">
+                      📄 {file}
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Individual Fixes */}
+              <div className="mt-4 space-y-2">
+                <div className="text-xs text-gray-400 uppercase font-semibold mb-2">
+                  Detalles de fixes ({pendingCommit.fixes.length}):
+                </div>
+                {pendingCommit.fixes.map((fix, idx) => (
+                  <div key={idx} className="bg-gray-900 rounded p-3 border border-gray-700 text-xs">
+                    <div className="text-gray-300 mb-1">
+                      <span className="text-blue-400 font-mono">{fix.filePath}</span>
+                      <span className="text-gray-600"> : </span>
+                      <span className="text-yellow-400">línea {fix.issue.line}</span>
+                    </div>
+                    <div className="text-gray-400 ml-4">
+                      {fix.issue.description || fix.issue.issue || fix.issue.problem || 'Fix aplicado'}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Footer - Actions */}
+            <div className="bg-gray-900 p-4 border-t border-gray-700 flex items-center justify-between gap-3">
+              <div className="text-xs text-gray-500">
+                Los cambios ya están aplicados en los archivos. ¿Crear commit?
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={handleRejectCommit}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded font-semibold transition-colors"
+                >
+                  ❌ Rechazar
+                </button>
+                <button
+                  onClick={handleApproveCommit}
+                  className="px-6 py-2 bg-green-600 hover:bg-green-500 text-white rounded font-semibold transition-colors shadow-lg"
+                >
+                  ✅ Aprobar y Commit
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <style jsx>{`
         @keyframes slide-in-right {
           from {
@@ -430,6 +564,30 @@ export default function ProactiveAlerts({ socket }) {
         }
         .animate-slide-in-right {
           animation: slide-in-right 0.3s ease-out;
+        }
+        @keyframes fade-in {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
+        }
+        .animate-fade-in {
+          animation: fade-in 0.2s ease-out;
+        }
+        @keyframes scale-in {
+          from {
+            transform: scale(0.9);
+            opacity: 0;
+          }
+          to {
+            transform: scale(1);
+            opacity: 1;
+          }
+        }
+        .animate-scale-in {
+          animation: scale-in 0.3s ease-out;
         }
       `}</style>
     </div>

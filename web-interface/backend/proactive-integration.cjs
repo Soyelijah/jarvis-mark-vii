@@ -4,12 +4,14 @@
 const path = require('path');
 const ProactiveAgent = require('../../core/proactive/proactive-agent.cjs');
 const FixEngine = require('../../core/proactive/fix-engine.cjs');
+const GitManager = require('../../core/proactive/git-manager.cjs');
 
 class ProactiveIntegration {
   constructor(io, options = {}) {
     this.io = io;
     this.proactiveAgent = null;
     this.fixEngine = null;
+    this.gitManager = null;
     this.isEnabled = options.enabled !== false;
     this.projectRoot = options.projectRoot || path.resolve(__dirname, '../..');
 
@@ -42,6 +44,14 @@ class ProactiveIntegration {
       dryRun: false // Aplicar fixes reales
     });
 
+    // Crear Git Manager
+    this.gitManager = new GitManager({
+      projectRoot: this.projectRoot,
+      autoCommit: false, // No auto-commit, pedir aprobación
+      requireApproval: true,
+      batchDelay: 10000 // 10 segundos para agrupar fixes
+    });
+
     // Crear Proactive Agent
     this.proactiveAgent = new ProactiveAgent({
       projectRoot: this.projectRoot,
@@ -65,6 +75,7 @@ class ProactiveIntegration {
 
     // Setup event listeners
     this.setupProactiveListeners();
+    this.setupGitListeners();
     this.setupSocketListeners();
 
     // Iniciar agente
@@ -146,6 +157,46 @@ class ProactiveIntegration {
   }
 
   /**
+   * Configura listeners del Git Manager
+   */
+  setupGitListeners() {
+    // Commit approval required
+    this.gitManager.on('commit:approval-required', (data) => {
+      console.log(`📝 [Proactive Integration] Commit requiere aprobación: ${data.fixes.length} fixes`);
+
+      // Emitir a todos los clientes
+      this.broadcastToAll('git:commit-pending', {
+        fixes: data.fixes,
+        message: data.message,
+        filesAffected: data.filesAffected,
+        timestamp: Date.now()
+      });
+    });
+
+    // Commit created
+    this.gitManager.on('commit:created', (data) => {
+      console.log(`✅ [Proactive Integration] Commit creado: ${data.fixes.length} fixes`);
+
+      this.broadcastToAll('git:commit-created', {
+        message: data.message,
+        fixes: data.fixes.length,
+        files: data.files,
+        timestamp: Date.now()
+      });
+    });
+
+    // Commit rejected
+    this.gitManager.on('commit:rejected', (data) => {
+      console.log(`❌ [Proactive Integration] Commit rechazado`);
+
+      this.broadcastToAll('git:commit-rejected', {
+        fixes: data.fixes.length,
+        timestamp: Date.now()
+      });
+    });
+  }
+
+  /**
    * Configura listeners de Socket.io
    */
   setupSocketListeners() {
@@ -191,6 +242,46 @@ class ProactiveIntegration {
         this.broadcastToAll('proactive:config-updated', config);
       });
 
+      // Listen: Cliente solicita fixes pendientes para commit
+      socket.on('git:get-pending', () => {
+        const pending = this.gitManager.getPendingFixes();
+        socket.emit('git:pending-fixes', pending);
+      });
+
+      // Listen: Cliente aprueba commit
+      socket.on('git:approve-commit', async () => {
+        console.log('✅ [Proactive Integration] Commit aprobado por usuario');
+
+        try {
+          const result = await this.gitManager.approveCommit();
+
+          socket.emit('git:commit-result', {
+            success: result.success,
+            message: result.message,
+            reason: result.reason,
+            timestamp: Date.now()
+          });
+        } catch (error) {
+          socket.emit('git:commit-result', {
+            success: false,
+            reason: error.message,
+            timestamp: Date.now()
+          });
+        }
+      });
+
+      // Listen: Cliente rechaza commit
+      socket.on('git:reject-commit', () => {
+        console.log('❌ [Proactive Integration] Commit rechazado por usuario');
+
+        this.gitManager.rejectCommit();
+
+        socket.emit('git:commit-rejected', {
+          success: true,
+          timestamp: Date.now()
+        });
+      });
+
       // Listen: Cliente solicita aplicar fix
       socket.on('proactive:apply-fix', async (data) => {
         console.log(`🔧 [Proactive Integration] Fix solicitado: ${data.filePath}:${data.issue.line}`);
@@ -204,6 +295,13 @@ class ProactiveIntegration {
 
           if (result.success) {
             console.log(`✅ [Proactive Integration] Fix aplicado exitosamente`);
+
+            // Registrar fix en Git Manager para commit posterior
+            this.gitManager.registerFix({
+              filePath: data.filePath,
+              issue: data.issue,
+              changes: result.changes
+            });
 
             // Notificar a todos los clientes
             this.broadcastToAll('proactive:fix-applied', {
