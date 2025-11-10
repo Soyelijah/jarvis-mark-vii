@@ -2,6 +2,7 @@
 
 > *"Just A Rather Very Intelligent System"* - Sistema de IA Personal con Personalidad Tony Stark
 
+[![CI/CD](https://github.com/Soyelijah/jarvis-mark-vii/actions/workflows/ci.yml/badge.svg)](https://github.com/Soyelijah/jarvis-mark-vii/actions)
 ![Status](https://img.shields.io/badge/Status-Production%20Ready-brightgreen)
 ![Version](https://img.shields.io/badge/Version-MARK%20VII-blue)
 ![Node](https://img.shields.io/badge/Node-18%2B-green)
@@ -9,6 +10,8 @@
 ![Tests](https://img.shields.io/badge/Tests-18%2F28%20Passing-yellow)
 ![Backend](https://img.shields.io/badge/Backend-100%25%20Coverage-brightgreen)
 ![License](https://img.shields.io/badge/License-MIT-blue)
+
+**🔗 Live Repository:** https://github.com/Soyelijah/jarvis-mark-vii
 
 ---
 
