@@ -249,7 +249,23 @@ class AutoMemoryLogger {
     // Generar resumen diario
     await this.updateDailySummary(sessionSummary);
 
+    // Actualizar contexto para Claude
+    await this.updateClaudeContext();
+
     return sessionSummary;
+  }
+
+  /**
+   * Actualiza el archivo de contexto para Claude
+   */
+  async updateClaudeContext() {
+    try {
+      const { updateContextFile } = require('./update-claude-context.cjs');
+      updateContextFile();
+      console.log(`✅ Claude context updated`);
+    } catch (error) {
+      console.warn('⚠️ No se pudo actualizar contexto de Claude:', error.message);
+    }
   }
 
   /**
