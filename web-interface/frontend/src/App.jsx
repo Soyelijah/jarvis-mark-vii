@@ -15,6 +15,7 @@ import TerminalPanel from './components/TerminalPanel';
 import NotificationToast from './components/NotificationToast';
 import CommandPalette from './components/CommandPalette';
 import ProactiveAlerts from './components/ProactiveAlerts';
+import LearningAnalytics from './components/LearningAnalytics';
 
 function App() {
   const [socket, setSocket] = useState(null);
@@ -169,9 +170,10 @@ function App() {
             { id: 'chat', label: '💬 Chat', icon: '💬' },
             { id: 'dashboard', label: '📊 Dashboard', icon: '📊' },
             { id: 'proactive', label: '🤖 Proactive', icon: '🤖' },
+            { id: 'learning', label: '🧠 Learning', icon: '🧠' },
             { id: 'monitor', label: '⚡ Monitor', icon: '⚡' },
             { id: 'terminal', label: '🖥️ Terminal', icon: '🖥️' },
-            { id: 'memories', label: '🧠 Memorias', icon: '🧠' },
+            { id: 'memories', label: '📝 Memorias', icon: '📝' },
             { id: 'tasks', label: '✅ Tareas', icon: '✅' },
             { id: 'projects', label: '📁 Proyectos', icon: '📁' }
           ].map(panel => (
@@ -215,6 +217,9 @@ function App() {
         )}
         {activePanel === 'proactive' && (
           <ProactiveAlerts socket={socket} />
+        )}
+        {activePanel === 'learning' && (
+          <LearningAnalytics socket={socket} />
         )}
       </main>
 

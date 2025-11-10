@@ -5,6 +5,7 @@ const path = require('path');
 const ProactiveAgent = require('../../core/proactive/proactive-agent.cjs');
 const FixEngine = require('../../core/proactive/fix-engine.cjs');
 const GitManager = require('../../core/proactive/git-manager.cjs');
+const PatternDatabase = require('../../core/learning/pattern-database.cjs');
 
 class ProactiveIntegration {
   constructor(io, options = {}) {
@@ -12,6 +13,7 @@ class ProactiveIntegration {
     this.proactiveAgent = null;
     this.fixEngine = null;
     this.gitManager = null;
+    this.patternDatabase = null;
     this.isEnabled = options.enabled !== false;
     this.projectRoot = options.projectRoot || path.resolve(__dirname, '../..');
 
@@ -38,10 +40,19 @@ class ProactiveIntegration {
 
     console.log('🚀 [Proactive Integration] Inicializando...');
 
-    // Crear Fix Engine
+    // Inicializar Pattern Database para Learning
+    this.patternDatabase = new PatternDatabase({
+      dbPath: path.join(this.projectRoot, 'memory', 'patterns.db')
+    });
+
+    await this.patternDatabase.initialize();
+
+    // Crear Fix Engine con Learning habilitado
     this.fixEngine = new FixEngine({
       projectRoot: this.projectRoot,
-      dryRun: false // Aplicar fixes reales
+      dryRun: false, // Aplicar fixes reales
+      patternDatabase: this.patternDatabase,
+      learningEnabled: true
     });
 
     // Crear Git Manager
@@ -280,6 +291,21 @@ class ProactiveIntegration {
           success: true,
           timestamp: Date.now()
         });
+      });
+
+      // Listen: Cliente solicita analytics de learning
+      socket.on('learning:get-analytics', async () => {
+        try {
+          const analytics = await this.patternDatabase.getAnalytics();
+
+          socket.emit('learning:analytics', analytics);
+        } catch (error) {
+          console.error('❌ [Proactive Integration] Error obteniendo analytics:', error.message);
+          socket.emit('learning:error', {
+            message: error.message,
+            timestamp: Date.now()
+          });
+        }
       });
 
       // Listen: Cliente solicita aplicar fix

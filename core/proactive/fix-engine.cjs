@@ -11,6 +11,8 @@ class FixEngine extends EventEmitter {
 
     this.projectRoot = options.projectRoot || process.cwd();
     this.dryRun = options.dryRun || false; // Si true, no aplica cambios reales
+    this.patternDatabase = options.patternDatabase || null; // Learning system
+    this.learningEnabled = options.learningEnabled !== false;
 
     // Estrategias de fix pre-definidas
     this.fixStrategies = {
@@ -97,6 +99,11 @@ class FixEngine extends EventEmitter {
         dryRun: this.dryRun,
         timestamp: Date.now()
       });
+
+      // Learning: Registrar fix exitoso en Pattern Database
+      if (this.learningEnabled && this.patternDatabase && !this.dryRun) {
+        await this.learnFromFix(filePath, issue, content, result);
+      }
 
       return {
         success: true,
@@ -427,6 +434,75 @@ class FixEngine extends EventEmitter {
         description: `Added fix suggestion: ${suggestion}`
       }]
     };
+  }
+
+  /**
+   * Aprende de un fix exitoso (Learning System)
+   */
+  async learnFromFix(filePath, issue, originalContent, fixResult) {
+    try {
+      const ext = path.extname(filePath);
+      const issueType = issue.type || this.determineIssueType(issue);
+      const severity = issue.severity || 'medium';
+
+      // Extraer código antes y después del fix
+      const lines = originalContent.split('\n');
+      const lineIndex = issue.line - 1;
+      const codeBefore = lines[lineIndex] || '';
+      const codeAfter = fixResult.changes[0]?.new || '';
+
+      // Aprender patrón
+      const patternResult = await this.patternDatabase.learnPattern({
+        code: codeBefore,
+        issueType,
+        severity,
+        fixStrategy: fixResult.changes[0]?.description || 'Fix applied',
+        language: 'javascript',
+        fileExtension: ext,
+        metadata: {
+          filePath,
+          line: issue.line,
+          changeType: 'fix'
+        }
+      });
+
+      // Registrar fix exitoso
+      await this.patternDatabase.recordSuccessfulFix({
+        patternId: patternResult.id,
+        filePath,
+        issueDescription: issue.description || issue.issue || issue.problem || '',
+        fixDescription: fixResult.changes[0]?.description || '',
+        codeBefore,
+        codeAfter,
+        success: true,
+        metadata: {
+          issueType,
+          severity
+        }
+      });
+
+      console.log(`🧠 [Fix Engine] Patrón ${patternResult.isNew ? 'nuevo' : 'existente'} aprendido (ID: ${patternResult.id})`);
+
+    } catch (error) {
+      console.error('❌ [Fix Engine] Error en learning system:', error.message);
+    }
+  }
+
+  /**
+   * Determina tipo de issue
+   */
+  determineIssueType(issue) {
+    const description = (issue.description || issue.issue || issue.problem || '').toLowerCase();
+
+    if (description.includes('eval')) return 'eval-usage';
+    if (description.includes('sql')) return 'sql-injection';
+    if (description.includes('xss') || description.includes('innerhtml')) return 'xss-vulnerability';
+    if (description.includes('loop')) return 'inefficient-loop';
+    if (description.includes('null') || description.includes('undefined')) return 'null-reference';
+    if (description.includes('await')) return 'missing-await';
+    if (description.includes('error') || description.includes('catch')) return 'missing-error-handling';
+
+    return 'generic';
   }
 
   /**

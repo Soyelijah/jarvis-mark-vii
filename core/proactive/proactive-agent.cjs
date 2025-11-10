@@ -3,6 +3,8 @@
 
 const FileWatcher = require('./file-watcher.cjs');
 const AIAnalyzer = require('./ai-analyzer.cjs');
+const PatternDatabase = require('../learning/pattern-database.cjs');
+const PatternMatcher = require('../learning/pattern-matcher.cjs');
 const { EventEmitter } = require('events');
 
 class ProactiveAgent extends EventEmitter {
@@ -23,6 +25,11 @@ class ProactiveAgent extends EventEmitter {
       ollamaUrl: options.ollamaUrl,
       model: options.model
     });
+
+    // Learning System
+    this.patternDatabase = null;
+    this.patternMatcher = null;
+    this.learningEnabled = options.learningEnabled !== false;
 
     // Estado
     this.isRunning = false;
@@ -65,8 +72,29 @@ class ProactiveAgent extends EventEmitter {
       this.handleFileChange(data);
     });
 
-    this.fileWatcher.on('analysis:required', (data) => {
+    this.fileWatcher.on('analysis:required', async (data) => {
       if (this.config.autoAnalyze) {
+        // Primero intentar análisis rápido con Pattern Matcher
+        if (this.patternMatcher) {
+          const quickResult = await this.patternMatcher.quickAnalyze(data.content, data.path);
+
+          if (quickResult.matched) {
+            console.log(`⚡ [Proactive Agent] Quick match (${quickResult.matchTime}ms): ${data.path}`);
+
+            // Emitir resultado de análisis basado en patrones
+            this.handlePatternMatch(data.path, quickResult.patterns);
+
+            // Si hay suficiente confianza, skip IA
+            const avgConfidence = quickResult.patterns.reduce((sum, p) => sum + p.confidence, 0) / quickResult.patterns.length;
+
+            if (avgConfidence >= 0.7) {
+              console.log(`   ✓ Confianza alta (${(avgConfidence * 100).toFixed(0)}%), saltando análisis IA`);
+              return; // Skip análisis IA
+            }
+          }
+        }
+
+        // Análisis completo con IA
         this.aiAnalyzer.queueAnalysis(data);
       }
     });
@@ -94,6 +122,26 @@ class ProactiveAgent extends EventEmitter {
     console.log('🚀 [Proactive Agent] Iniciando modo proactivo...');
     console.log(`📁 [Proactive Agent] Proyecto: ${this.projectRoot}`);
     console.log(`🤖 [Proactive Agent] Auto-análisis: ${this.config.autoAnalyze ? 'Activado' : 'Desactivado'}`);
+
+    // Inicializar Learning System
+    if (this.learningEnabled) {
+      console.log('🧠 [Proactive Agent] Inicializando Learning System...');
+
+      this.patternDatabase = new PatternDatabase({
+        dbPath: `${this.projectRoot}/memory/patterns.db`
+      });
+
+      await this.patternDatabase.initialize();
+
+      this.patternMatcher = new PatternMatcher(this.patternDatabase, {
+        enabled: true,
+        minConfidence: 0.5
+      });
+
+      await this.patternMatcher.initialize();
+
+      console.log('✅ [Proactive Agent] Learning System activo');
+    }
 
     this.isRunning = true;
     this.startTime = Date.now();
@@ -175,6 +223,43 @@ class ProactiveAgent extends EventEmitter {
       analysis,
       priority,
       timestamp: Date.now()
+    });
+  }
+
+  /**
+   * Maneja matches de patrones (quick analysis)
+   */
+  handlePatternMatch(filePath, patterns) {
+    console.log(`⚡ [Proactive Agent] Pattern-based detection: ${patterns.length} issues`);
+
+    // Convertir patterns a formato de análisis
+    const analysis = {
+      bugs: patterns.filter(p => p.severity === 'medium' || p.severity === 'low'),
+      security: patterns.filter(p => p.severity === 'high' || p.severity === 'critical'),
+      performance: patterns.filter(p => p.issueType.includes('loop') || p.issueType.includes('performance')),
+      improvements: [],
+      summary: `Quick analysis found ${patterns.length} known patterns`
+    };
+
+    const totalIssues = patterns.length;
+    this.stats.issuesFound += totalIssues;
+
+    // Determinar prioridad
+    const priority = patterns.some(p => p.severity === 'critical') ? 'critical' :
+                     patterns.some(p => p.severity === 'high') ? 'high' : 'medium';
+
+    // Notificar si hay issues críticos
+    if (priority === 'critical' || (priority === 'high' && analysis.security.length > 0)) {
+      this.sendNotification(filePath, analysis, priority);
+    }
+
+    // Emitir para UI
+    this.emit('analysis:complete', {
+      path: filePath,
+      analysis,
+      priority,
+      timestamp: Date.now(),
+      source: 'pattern-match'
     });
   }
 
