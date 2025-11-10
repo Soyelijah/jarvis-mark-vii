@@ -16,6 +16,7 @@ import ReportsViewer from './ReportsViewer';
 import NotificationCenter from './NotificationCenter';
 import CodeSearch from './CodeSearch';
 import DocGenerator from './DocGenerator';
+import VoiceControl from './VoiceControl';
 
 const AutonomousDashboard = ({ socket }) => {
   // Estado del agente
@@ -47,6 +48,34 @@ const AutonomousDashboard = ({ socket }) => {
 
   // Tab activo (dashboard o analytics)
   const [activeTab, setActiveTab] = useState('dashboard');
+
+  // Voice control handlers
+  const handleVoiceAction = (action, parameters) => {
+    switch (action) {
+      case 'execute-task':
+        if (parameters?.task) {
+          setTaskInput(parameters.task);
+          setActiveTab('dashboard');
+        }
+        break;
+      case 'search':
+        setActiveTab('search');
+        break;
+      case 'document':
+        setActiveTab('docs');
+        break;
+      case 'show-notifications':
+        // Las notificaciones son flotantes, no hacemos nada
+        break;
+      case 'open-view':
+        if (parameters?.view) {
+          setActiveTab(parameters.view);
+        }
+        break;
+      default:
+        console.log('Acción de voz no manejada:', action);
+    }
+  };
 
   // Agregar evento al log
   const addLog = (type, message, data = null) => {
@@ -453,6 +482,16 @@ const AutonomousDashboard = ({ socket }) => {
         >
           📚 Documentación
         </button>
+        <button
+          onClick={() => setActiveTab('voice')}
+          className={`px-6 py-3 font-semibold transition-all ${
+            activeTab === 'voice'
+              ? 'text-cyan-400 border-b-2 border-cyan-400'
+              : 'text-gray-400 hover:text-white'
+          }`}
+        >
+          🎤 Voz
+        </button>
       </div>
 
       {/* Dashboard Tab */}
@@ -686,6 +725,13 @@ const AutonomousDashboard = ({ socket }) => {
       {/* Documentation Tab */}
       {activeTab === 'docs' && (
         <DocGenerator socket={socket} />
+      )}
+
+      {/* Voice Control Tab */}
+      {activeTab === 'voice' && (
+        <div className="h-[calc(100vh-220px)]">
+          <VoiceControl socket={socket} onAction={handleVoiceAction} />
+        </div>
       )}
     </div>
   );

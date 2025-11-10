@@ -31,6 +31,9 @@ const CodeSearchIntegration = require('./code-search-integration.cjs');
 // Doc Generator Integration - Automatic Documentation
 const DocGeneratorIntegration = require('./doc-generator-integration.cjs');
 
+// Voice Control Integration - Voice Commands & Chat
+const VoiceControlIntegration = require('./voice-control-integration.cjs');
+
 // Simple logger for engines
 const logger = {
   info: (msg) => console.log(msg),
@@ -1126,6 +1129,11 @@ io.on('connection', (socket) => {
   if (global.docGeneratorIntegration) {
     global.docGeneratorIntegration.setupSocketHandlers(socket);
   }
+
+  // Setup Voice Control socket handlers (will be initialized later)
+  if (global.voiceControlIntegration) {
+    global.voiceControlIntegration.setupSocketHandlers(socket);
+  }
 });
 
 // ===== ERROR HANDLING =====
@@ -1194,6 +1202,21 @@ server.listen(PORT, async () => {
     console.log('📚 Doc Generator integrado con panel web');
   } catch (error) {
     console.error('❌ Error inicializando Doc Generator:', error.message);
+  }
+
+  // ============ VOICE CONTROL INTEGRATION ============
+  const voiceControlIntegration = new VoiceControlIntegration(io, {
+    autonomousIntegration,
+    codeSearchIntegration,
+    docGeneratorIntegration
+  });
+  global.voiceControlIntegration = voiceControlIntegration; // Make available globally
+
+  try {
+    await voiceControlIntegration.initialize();
+    console.log('🎤 Voice Control integrado con panel web');
+  } catch (error) {
+    console.error('❌ Error inicializando Voice Control:', error.message);
   }
 
   // Graceful shutdown
