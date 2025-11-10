@@ -37,6 +37,9 @@ const VoiceControlIntegration = require('./voice-control-integration.cjs');
 // Scheduler Integration - Task Scheduling & Workflows
 const SchedulerIntegration = require('./scheduler-integration.cjs');
 
+// Logging Integration - Structured Logging & Monitoring
+const LoggingIntegration = require('./logging-integration.cjs');
+
 // Simple logger for engines
 const logger = {
   info: (msg) => console.log(msg),
@@ -1142,6 +1145,11 @@ io.on('connection', (socket) => {
   if (global.schedulerIntegration) {
     global.schedulerIntegration.setupSocketHandlers(socket);
   }
+
+  // Setup Logging socket handlers (will be initialized later)
+  if (global.loggingIntegration) {
+    global.loggingIntegration.setupSocketHandlers(socket);
+  }
 });
 
 // ===== ERROR HANDLING =====
@@ -1240,6 +1248,17 @@ server.listen(PORT, async () => {
     console.log('⏰ Task Scheduler & Workflows integrado con panel web');
   } catch (error) {
     console.error('❌ Error inicializando Scheduler:', error.message);
+  }
+
+  // ============ LOGGING INTEGRATION ============
+  const loggingIntegration = new LoggingIntegration(io);
+  global.loggingIntegration = loggingIntegration; // Make available globally
+
+  try {
+    await loggingIntegration.initialize();
+    console.log('📝 Logging & Monitoring integrado con panel web');
+  } catch (error) {
+    console.error('❌ Error inicializando Logging:', error.message);
   }
 
   // Graceful shutdown
