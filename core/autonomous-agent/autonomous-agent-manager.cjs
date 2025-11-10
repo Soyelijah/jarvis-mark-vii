@@ -8,6 +8,7 @@ const WebIntelligenceManager = require('../web-intelligence/web-intelligence-man
 const MemoryManager = require('../neural-memory/memory-manager.cjs');
 const AIAnalyzer = require('../proactive/ai-analyzer.cjs');
 const MetricsPersistence = require('../metrics-persistence.cjs');
+const MaintenanceScheduler = require('../maintenance-scheduler.cjs');
 const { EventEmitter } = require('events');
 
 /**
@@ -66,6 +67,19 @@ class AutonomousAgentManager extends EventEmitter {
     // Sistema de persistencia
     this.metricsPersistence = new MetricsPersistence();
 
+    // Sistema de mantenimiento automático
+    this.maintenanceScheduler = new MaintenanceScheduler({
+      projectRoot: this.projectRoot,
+      metricsPersistence: this.metricsPersistence,
+      memoryManager: this.memoryManager,
+      webIntelligence: this.webIntelligence,
+      sessionRetentionDays: options.sessionRetentionDays || 90,
+      logRetentionDays: options.logRetentionDays || 30,
+      metricsRetentionDays: options.metricsRetentionDays || 365,
+      backupEnabled: options.backupEnabled !== false,
+      reportsEnabled: options.reportsEnabled !== false
+    });
+
     // Estado del agente
     this.state = 'idle'; // idle, planning, executing, verifying, completed, failed
     this.currentTask = null;
@@ -90,6 +104,9 @@ class AutonomousAgentManager extends EventEmitter {
     await this.memoryManager.initialize();
     await this.webIntelligence.initialize();
     this.metricsPersistence.initialize();
+
+    // Iniciar mantenimiento automático
+    this.maintenanceScheduler.start();
 
     console.log('✅ [Autonomous Agent] Sistema listo para trabajar autónomamente');
     this.emit('ready');
@@ -614,6 +631,77 @@ Por favor genera un plan de corrección en formato JSON:
    */
   cleanOldData(retention = {}) {
     return this.metricsPersistence.cleanOldData(retention);
+  }
+
+  /**
+   * Obtiene el estado del maintenance scheduler
+   * @returns {Object} - Estado actual
+   */
+  getMaintenanceStatus() {
+    return this.maintenanceScheduler.getStatus();
+  }
+
+  /**
+   * Genera reporte manualmente
+   * @param {string} type - Tipo de reporte: daily, weekly, monthly
+   * @returns {Object} - Reporte generado
+   */
+  async generateReport(type = 'daily') {
+    switch (type) {
+      case 'daily':
+        return await this.maintenanceScheduler.generateDailyReport();
+      case 'weekly':
+        return await this.maintenanceScheduler.generateWeeklyReport();
+      case 'monthly':
+        return await this.maintenanceScheduler.generateMonthlyReport();
+      default:
+        throw new Error(`Tipo de reporte inválido: ${type}`);
+    }
+  }
+
+  /**
+   * Obtiene lista de reportes disponibles
+   * @returns {Array} - Array de reportes
+   */
+  getAvailableReports() {
+    const reportsPath = this.maintenanceScheduler.config.reportsPath;
+
+    if (!require('fs').existsSync(reportsPath)) {
+      return [];
+    }
+
+    const files = require('fs').readdirSync(reportsPath)
+      .filter(f => f.endsWith('.json'))
+      .map(f => {
+        const fullPath = require('path').join(reportsPath, f);
+        const stats = require('fs').statSync(fullPath);
+        return {
+          name: f,
+          path: fullPath,
+          size: stats.size,
+          created: stats.mtimeMs
+        };
+      })
+      .sort((a, b) => b.created - a.created);
+
+    return files;
+  }
+
+  /**
+   * Obtiene un reporte específico
+   * @param {string} filename - Nombre del archivo de reporte
+   * @returns {Object} - Contenido del reporte
+   */
+  getReport(filename) {
+    const reportsPath = this.maintenanceScheduler.config.reportsPath;
+    const reportPath = require('path').join(reportsPath, filename);
+
+    if (!require('fs').existsSync(reportPath)) {
+      return null;
+    }
+
+    const content = require('fs').readFileSync(reportPath, 'utf8');
+    return JSON.parse(content);
   }
 }
 
