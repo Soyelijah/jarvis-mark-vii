@@ -14,6 +14,7 @@ import MetricsChart, {
 import SessionHistory from './SessionHistory';
 import ReportsViewer from './ReportsViewer';
 import NotificationCenter from './NotificationCenter';
+import CodeSearch from './CodeSearch';
 
 const AutonomousDashboard = ({ socket }) => {
   // Estado del agente
@@ -431,6 +432,16 @@ const AutonomousDashboard = ({ socket }) => {
         >
           📊 Reportes
         </button>
+        <button
+          onClick={() => setActiveTab('search')}
+          className={`px-6 py-3 font-semibold transition-all ${
+            activeTab === 'search'
+              ? 'text-cyan-400 border-b-2 border-cyan-400'
+              : 'text-gray-400 hover:text-white'
+          }`}
+        >
+          🔍 Búsqueda
+        </button>
       </div>
 
       {/* Dashboard Tab */}
@@ -654,6 +665,11 @@ const AutonomousDashboard = ({ socket }) => {
       {/* Reports Tab */}
       {activeTab === 'reports' && (
         <ReportsViewer socket={socket} />
+      )}
+
+      {/* Search Tab */}
+      {activeTab === 'search' && (
+        <CodeSearch socket={socket} />
       )}
     </div>
   );

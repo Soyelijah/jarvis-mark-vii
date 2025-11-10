@@ -25,6 +25,9 @@ const ProactiveIntegration = require('./proactive-integration.cjs');
 // Autonomous Integration - Autonomous Agent System
 const AutonomousIntegration = require('./autonomous-integration.cjs');
 
+// Code Search Integration - Intelligent Code Search
+const CodeSearchIntegration = require('./code-search-integration.cjs');
+
 // Simple logger for engines
 const logger = {
   info: (msg) => console.log(msg),
@@ -1110,6 +1113,11 @@ io.on('connection', (socket) => {
   if (global.autonomousIntegration) {
     global.autonomousIntegration.setupSocketHandlers(socket);
   }
+
+  // Setup Code Search socket handlers (will be initialized later)
+  if (global.codeSearchIntegration) {
+    global.codeSearchIntegration.setupSocketHandlers(socket);
+  }
 });
 
 // ===== ERROR HANDLING =====
@@ -1156,6 +1164,17 @@ server.listen(PORT, async () => {
     console.log('🤖 Autonomous Agent integrado con panel web');
   } catch (error) {
     console.error('❌ Error inicializando Autonomous Agent:', error.message);
+  }
+
+  // ============ CODE SEARCH INTEGRATION ============
+  const codeSearchIntegration = new CodeSearchIntegration(io);
+  global.codeSearchIntegration = codeSearchIntegration; // Make available globally
+
+  try {
+    await codeSearchIntegration.initialize();
+    console.log('🔍 Code Search integrado con panel web');
+  } catch (error) {
+    console.error('❌ Error inicializando Code Search:', error.message);
   }
 
   // Graceful shutdown
