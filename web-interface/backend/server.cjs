@@ -46,6 +46,9 @@ const SettingsIntegration = require('./settings-integration.cjs');
 // Backup Integration - Backup & Disaster Recovery
 const BackupIntegration = require('./backup-integration.cjs');
 
+// Test Integration - Automated Testing & QA
+const TestIntegration = require('./test-integration.cjs');
+
 // Simple logger for engines
 const logger = {
   info: (msg) => console.log(msg),
@@ -1166,6 +1169,11 @@ io.on('connection', (socket) => {
   if (global.backupIntegration) {
     global.backupIntegration.setupSocketHandlers(socket);
   }
+
+  // Setup Test socket handlers (will be initialized later)
+  if (global.testIntegration) {
+    global.testIntegration.setupSocketHandlers(socket);
+  }
 });
 
 // ===== ERROR HANDLING =====
@@ -1297,6 +1305,17 @@ server.listen(PORT, async () => {
     console.log('💾 Backup & Recovery integrado con panel web');
   } catch (error) {
     console.error('❌ Error inicializando Backup:', error.message);
+  }
+
+  // ============ TEST INTEGRATION ============
+  const testIntegration = new TestIntegration(io);
+  global.testIntegration = testIntegration; // Make available globally
+
+  try {
+    await testIntegration.initialize();
+    console.log('🧪 Test Runner & QA integrado con panel web');
+  } catch (error) {
+    console.error('❌ Error inicializando Testing:', error.message);
   }
 
   // Graceful shutdown
