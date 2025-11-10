@@ -22,6 +22,7 @@ import LogViewer from './LogViewer';
 import Settings from './Settings';
 import BackupManager from './BackupManager';
 import TestRunner from './TestRunner';
+import UserManagement from './UserManagement';
 
 const AutonomousDashboard = ({ socket }) => {
   // Estado del agente
@@ -547,6 +548,16 @@ const AutonomousDashboard = ({ socket }) => {
         >
           🧪 Tests
         </button>
+        <button
+          onClick={() => setActiveTab('security')}
+          className={`px-6 py-3 font-semibold transition-all ${
+            activeTab === 'security'
+              ? 'text-cyan-400 border-b-2 border-cyan-400'
+              : 'text-gray-400 hover:text-white'
+          }`}
+        >
+          🔐 Seguridad
+        </button>
       </div>
 
       {/* Dashboard Tab */}
@@ -812,6 +823,11 @@ const AutonomousDashboard = ({ socket }) => {
       {/* Tests Tab */}
       {activeTab === 'tests' && (
         <TestRunner socket={socket} />
+      )}
+
+      {/* Security Tab */}
+      {activeTab === 'security' && (
+        <UserManagement socket={socket} currentUser={null} />
       )}
     </div>
   );

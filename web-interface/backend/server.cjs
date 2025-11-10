@@ -49,6 +49,9 @@ const BackupIntegration = require('./backup-integration.cjs');
 // Test Integration - Automated Testing & QA
 const TestIntegration = require('./test-integration.cjs');
 
+// Auth Integration - Security & Authentication
+const AuthIntegration = require('./auth-integration.cjs');
+
 // Simple logger for engines
 const logger = {
   info: (msg) => console.log(msg),
@@ -1174,6 +1177,11 @@ io.on('connection', (socket) => {
   if (global.testIntegration) {
     global.testIntegration.setupSocketHandlers(socket);
   }
+
+  // Setup Auth socket handlers (will be initialized later)
+  if (global.authIntegration) {
+    global.authIntegration.setupSocketHandlers(socket);
+  }
 });
 
 // ===== ERROR HANDLING =====
@@ -1316,6 +1324,17 @@ server.listen(PORT, async () => {
     console.log('🧪 Test Runner & QA integrado con panel web');
   } catch (error) {
     console.error('❌ Error inicializando Testing:', error.message);
+  }
+
+  // ============ AUTH INTEGRATION ============
+  const authIntegration = new AuthIntegration(io);
+  global.authIntegration = authIntegration; // Make available globally
+
+  try {
+    await authIntegration.initialize();
+    console.log('🔐 Security & Authentication integrado con panel web');
+  } catch (error) {
+    console.error('❌ Error inicializando Auth:', error.message);
   }
 
   // Graceful shutdown
