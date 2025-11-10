@@ -3,6 +3,15 @@
 
 import React, { useState, useEffect } from 'react';
 import './AutonomousDashboard.css';
+import MetricsChart, {
+  createScoreHistoryData,
+  createSuccessRateData,
+  createSubtasksByTypeData,
+  createTimelineData,
+  createKnowledgeGrowthData,
+  createMemoryDistributionData
+} from './MetricsChart';
+import SessionHistory from './SessionHistory';
 
 const AutonomousDashboard = ({ socket }) => {
   // Estado del agente
@@ -25,9 +34,15 @@ const AutonomousDashboard = ({ socket }) => {
   // Estadísticas
   const [stats, setStats] = useState(null);
 
+  // Historial de sesiones
+  const [sessions, setSessions] = useState([]);
+
   // Form state
   const [taskInput, setTaskInput] = useState('');
   const [isExecuting, setIsExecuting] = useState(false);
+
+  // Tab activo (dashboard o analytics)
+  const [activeTab, setActiveTab] = useState('dashboard');
 
   // Agregar evento al log
   const addLog = (type, message, data = null) => {
@@ -44,6 +59,7 @@ const AutonomousDashboard = ({ socket }) => {
     // Obtener estado inicial
     socket.emit('autonomous:get-state');
     socket.emit('autonomous:get-stats');
+    socket.emit('autonomous:get-sessions'); // Obtener historial de sesiones
 
     // === TASK EVENTS ===
     socket.on('autonomous:task-start', (data) => {
@@ -69,8 +85,24 @@ const AutonomousDashboard = ({ socket }) => {
         state: 'completed',
         currentTask: null
       }));
-      // Refrescar stats
+
+      // Añadir sesión al historial
+      const newSession = {
+        id: Date.now(),
+        timestamp: Date.now(),
+        content: {
+          task: agentState.currentTask,
+          plan: currentPlan,
+          summary: data.summary,
+          results: data.results,
+          duration: data.duration
+        }
+      };
+      setSessions(prev => [...prev, newSession]);
+
+      // Refrescar stats y sesiones
       socket.emit('autonomous:get-stats');
+      socket.emit('autonomous:get-sessions');
     });
 
     socket.on('autonomous:task-failed', (data) => {
@@ -155,6 +187,10 @@ const AutonomousDashboard = ({ socket }) => {
       setStats(statsData);
     });
 
+    socket.on('autonomous:sessions', (sessionsData) => {
+      setSessions(sessionsData || []);
+    });
+
     socket.on('autonomous:paused', () => {
       addLog('info', 'Agente pausado');
       setAgentState(prev => ({ ...prev, state: 'paused' }));
@@ -195,6 +231,7 @@ const AutonomousDashboard = ({ socket }) => {
       socket.off('autonomous:research-complete');
       socket.off('autonomous:state');
       socket.off('autonomous:stats');
+      socket.off('autonomous:sessions');
       socket.off('autonomous:paused');
       socket.off('autonomous:resumed');
       socket.off('autonomous:cancelled');
@@ -347,8 +384,45 @@ const AutonomousDashboard = ({ socket }) => {
         </div>
       </div>
 
-      {/* Task Input */}
-      <div className="bg-gray-800 rounded-lg p-6 shadow-lg">
+      {/* Tabs */}
+      <div className="flex space-x-2 border-b border-gray-700">
+        <button
+          onClick={() => setActiveTab('dashboard')}
+          className={`px-6 py-3 font-semibold transition-all ${
+            activeTab === 'dashboard'
+              ? 'text-cyan-400 border-b-2 border-cyan-400'
+              : 'text-gray-400 hover:text-white'
+          }`}
+        >
+          📊 Dashboard
+        </button>
+        <button
+          onClick={() => setActiveTab('analytics')}
+          className={`px-6 py-3 font-semibold transition-all ${
+            activeTab === 'analytics'
+              ? 'text-cyan-400 border-b-2 border-cyan-400'
+              : 'text-gray-400 hover:text-white'
+          }`}
+        >
+          📈 Analytics
+        </button>
+        <button
+          onClick={() => setActiveTab('history')}
+          className={`px-6 py-3 font-semibold transition-all ${
+            activeTab === 'history'
+              ? 'text-cyan-400 border-b-2 border-cyan-400'
+              : 'text-gray-400 hover:text-white'
+          }`}
+        >
+          📜 Historial
+        </button>
+      </div>
+
+      {/* Dashboard Tab */}
+      {activeTab === 'dashboard' && (
+        <>
+          {/* Task Input */}
+          <div className="bg-gray-800 rounded-lg p-6 shadow-lg">
         <h2 className="text-xl font-bold text-white mb-4">Ejecutar Tarea Autónoma</h2>
         <div className="flex space-x-4">
           <input
@@ -499,6 +573,68 @@ const AutonomousDashboard = ({ socket }) => {
           )}
         </div>
       </div>
+      </>
+      )}
+
+      {/* Analytics Tab */}
+      {activeTab === 'analytics' && (
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Score History Chart */}
+            <MetricsChart
+              type="line"
+              data={createScoreHistoryData(sessions)}
+              title="📈 Historial de Scores"
+              height={300}
+            />
+
+            {/* Success Rate Chart */}
+            <MetricsChart
+              type="doughnut"
+              data={createSuccessRateData(stats)}
+              title="✅ Tasa de Éxito"
+              height={300}
+            />
+
+            {/* Subtasks by Type Chart */}
+            <MetricsChart
+              type="bar"
+              data={createSubtasksByTypeData(sessions)}
+              title="🔧 Sub-tareas por Tipo"
+              height={300}
+            />
+
+            {/* Timeline Chart */}
+            <MetricsChart
+              type="bar"
+              data={createTimelineData(sessions)}
+              title="⏱️ Línea de Tiempo"
+              height={300}
+            />
+
+            {/* Knowledge Growth Chart */}
+            <MetricsChart
+              type="bar"
+              data={createKnowledgeGrowthData(stats)}
+              title="🧠 Crecimiento de Conocimiento"
+              height={300}
+            />
+
+            {/* Memory Distribution Chart */}
+            <MetricsChart
+              type="doughnut"
+              data={createMemoryDistributionData(stats)}
+              title="💾 Distribución de Memoria"
+              height={300}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* History Tab */}
+      {activeTab === 'history' && (
+        <SessionHistory sessions={sessions} />
+      )}
     </div>
   );
 };

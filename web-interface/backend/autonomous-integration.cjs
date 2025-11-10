@@ -201,6 +201,22 @@ class AutonomousIntegration {
       }
     });
 
+    // Obtener historial de sesiones
+    socket.on('autonomous:get-sessions', async () => {
+      try {
+        if (!this.isInitialized) {
+          await this.initialize();
+        }
+
+        const sessions = await this.agent.getSessionHistory();
+        socket.emit('autonomous:sessions', sessions);
+      } catch (error) {
+        socket.emit('autonomous:error', {
+          message: error.message
+        });
+      }
+    });
+
     // Pausar ejecución
     socket.on('autonomous:pause', () => {
       try {
