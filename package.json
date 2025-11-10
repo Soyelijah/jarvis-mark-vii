@@ -55,7 +55,7 @@
     "ncp": "^2.0.0",
     "node-cron": "^3.0.3",
     "node-fetch": "^3.3.2",
-    "puppeteer": "^21.0.0",
+    "puppeteer": "^24.29.1",
     "simple-git": "^3.20.0",
     "socket.io": "^4.8.1",
     "sqlite3": "^5.1.6",

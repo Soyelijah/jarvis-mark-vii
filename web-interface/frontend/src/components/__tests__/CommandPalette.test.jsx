@@ -54,7 +54,8 @@ describe('CommandPalette Component', () => {
       />
     );
 
-    fireEvent.keyDown(window, { key: 'Escape' });
+    const input = screen.getByPlaceholderText(/buscar/i);
+    fireEvent.keyDown(input, { key: 'Escape' });
 
     expect(onClose).toHaveBeenCalled();
   });
@@ -70,8 +71,8 @@ describe('CommandPalette Component', () => {
       />
     );
 
-    // Click on the first command
-    const firstCommand = screen.getAllByRole('button')[0];
+    // Click on the first command (it's a div, not a button)
+    const firstCommand = screen.getByText(/Ir a Dashboard/i).closest('div[class*="cursor-pointer"]');
     fireEvent.click(firstCommand);
 
     expect(onNavigate).toHaveBeenCalled();

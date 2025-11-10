@@ -6,8 +6,14 @@ import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 
-export default function ChatMessage({ message, isUser, timestamp }) {
+export default function ChatMessage({ message, isUser, timestamp, role, content }) {
   const [copied, setCopied] = useState(false);
+
+  // Support both interfaces: object {role, content, timestamp} or direct props {message, isUser, timestamp}
+  const messageRole = role || (message?.role);
+  const messageContent = content || message?.content || message;
+  const messageTimestamp = timestamp || message?.timestamp;
+  const isUserMessage = isUser !== undefined ? isUser : messageRole === 'user';
 
   const copyToClipboard = (code) => {
     navigator.clipboard.writeText(code);
@@ -16,8 +22,8 @@ export default function ChatMessage({ message, isUser, timestamp }) {
   };
 
   return (
-    <div className={`flex gap-3 ${isUser ? 'justify-end' : 'justify-start'} mb-4 animate-fade-in`}>
-      {!isUser && (
+    <div className={`flex gap-3 ${isUserMessage ? 'justify-end' : 'justify-start'} mb-4 animate-fade-in`}>
+      {!isUserMessage && (
         <div className="flex-shrink-0">
           <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-xl animate-pulse-slow">
             🤖
@@ -25,16 +31,16 @@ export default function ChatMessage({ message, isUser, timestamp }) {
         </div>
       )}
 
-      <div className={`max-w-3xl ${isUser ? 'order-first' : ''}`}>
+      <div className={`max-w-3xl ${isUserMessage ? 'order-first' : ''}`}>
         <div
           className={`rounded-lg p-4 shadow-lg ${
-            isUser
+            isUserMessage
               ? 'bg-gradient-to-br from-blue-600 to-blue-700 text-white'
               : 'bg-gray-800 border border-gray-700'
           }`}
         >
-          {isUser ? (
-            <p className="text-white whitespace-pre-wrap">{message}</p>
+          {isUserMessage ? (
+            <p className="text-white whitespace-pre-wrap">{messageContent}</p>
           ) : (
             <div className="prose prose-invert max-w-none">
               <ReactMarkdown
@@ -112,15 +118,15 @@ export default function ChatMessage({ message, isUser, timestamp }) {
                   },
                 }}
               >
-                {message}
+                {messageContent}
               </ReactMarkdown>
             </div>
           )}
         </div>
 
-        {timestamp && (
-          <div className={`text-xs text-gray-500 mt-1 ${isUser ? 'text-right' : 'text-left'}`}>
-            {new Date(timestamp).toLocaleTimeString('es-AR', {
+        {messageTimestamp && (
+          <div className={`text-xs text-gray-500 mt-1 ${isUserMessage ? 'text-right' : 'text-left'}`}>
+            {new Date(messageTimestamp).toLocaleTimeString('es-AR', {
               hour: '2-digit',
               minute: '2-digit'
             })}
@@ -128,7 +134,7 @@ export default function ChatMessage({ message, isUser, timestamp }) {
         )}
       </div>
 
-      {isUser && (
+      {isUserMessage && (
         <div className="flex-shrink-0">
           <div className="w-10 h-10 rounded-full bg-gradient-to-br from-green-500 to-teal-600 flex items-center justify-center text-xl">
             👤

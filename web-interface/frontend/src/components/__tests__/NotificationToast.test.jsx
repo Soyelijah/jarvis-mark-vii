@@ -1,63 +1,79 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import NotificationToast from '../NotificationToast';
 
 describe('NotificationToast Component', () => {
-  it('renders notification with correct message', () => {
-    const notification = {
-      id: '1',
-      type: 'success',
-      message: 'Task completed successfully',
+  let mockSocket;
+
+  beforeEach(() => {
+    // Create a mock socket with event listeners
+    mockSocket = {
+      on: vi.fn(),
+      off: vi.fn(),
+      emit: vi.fn(),
     };
-
-    render(<NotificationToast notification={notification} onClose={() => {}} />);
-
-    expect(screen.getByText('Task completed successfully')).toBeInTheDocument();
   });
 
-  it('calls onClose when close button is clicked', () => {
-    const onClose = vi.fn();
-    const notification = {
-      id: '1',
-      type: 'success',
-      message: 'Test notification',
-    };
+  it('renders empty container initially', () => {
+    const { container } = render(<NotificationToast socket={mockSocket} />);
 
-    render(<NotificationToast notification={notification} onClose={onClose} />);
+    // Container should exist but be empty initially
+    expect(container.querySelector('.fixed')).toBeInTheDocument();
+  });
 
+  it('registers socket event listeners', () => {
+    render(<NotificationToast socket={mockSocket} />);
+
+    // Should register all necessary event listeners
+    expect(mockSocket.on).toHaveBeenCalledWith('notification', expect.any(Function));
+    expect(mockSocket.on).toHaveBeenCalledWith('task:created', expect.any(Function));
+    expect(mockSocket.on).toHaveBeenCalledWith('task:completed', expect.any(Function));
+    expect(mockSocket.on).toHaveBeenCalledWith('connect', expect.any(Function));
+  });
+
+  it('displays notification when socket emits event', async () => {
+    let notificationHandler;
+    mockSocket.on.mockImplementation((event, handler) => {
+      if (event === 'notification') {
+        notificationHandler = handler;
+      }
+    });
+
+    render(<NotificationToast socket={mockSocket} />);
+
+    // Trigger notification
+    notificationHandler({ message: 'Test notification', type: 'success' });
+
+    // Wait for notification to appear
+    await waitFor(() => {
+      expect(screen.getByText('Test notification')).toBeInTheDocument();
+    });
+  });
+
+  it('removes notification when close button is clicked', async () => {
+    let notificationHandler;
+    mockSocket.on.mockImplementation((event, handler) => {
+      if (event === 'notification') {
+        notificationHandler = handler;
+      }
+    });
+
+    render(<NotificationToast socket={mockSocket} />);
+
+    // Add notification
+    notificationHandler({ message: 'Closeable notification', type: 'info' });
+
+    await waitFor(() => {
+      expect(screen.getByText('Closeable notification')).toBeInTheDocument();
+    });
+
+    // Click close button
     const closeButton = screen.getByRole('button');
     fireEvent.click(closeButton);
 
-    expect(onClose).toHaveBeenCalledWith('1');
-  });
-
-  it('applies correct styling for success type', () => {
-    const notification = {
-      id: '1',
-      type: 'success',
-      message: 'Success message',
-    };
-
-    const { container } = render(
-      <NotificationToast notification={notification} onClose={() => {}} />
-    );
-
-    // Check for success-related classes or styles
-    expect(container.firstChild).toHaveClass(/success/i);
-  });
-
-  it('applies correct styling for error type', () => {
-    const notification = {
-      id: '1',
-      type: 'error',
-      message: 'Error message',
-    };
-
-    const { container } = render(
-      <NotificationToast notification={notification} onClose={() => {}} />
-    );
-
-    // Check for error-related classes or styles
-    expect(container.firstChild).toHaveClass(/error/i);
+    // Notification should be removed
+    await waitFor(() => {
+      expect(screen.queryByText('Closeable notification')).not.toBeInTheDocument();
+    });
   });
 });
