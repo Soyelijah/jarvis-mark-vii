@@ -7,6 +7,7 @@
   "scripts": {
     "start": "node app.js",
     "pure": "node jarvis-pure-start.js",
+    "pure:memory": "node core/jarvis-with-memory.cjs",
     "complete": "node main-complete.js",
     "fase7": "node main-fase7.js",
     "ultimate": "node main-ultimate.js",
@@ -18,7 +19,11 @@
     "test:backend": "cd web-interface/backend && jest",
     "test:frontend": "cd web-interface/frontend && npm run test:run",
     "test:coverage": "npm run test:backend -- --coverage && npm run test:frontend -- --coverage",
-    "test:watch": "cd web-interface/frontend && npm test"
+    "test:watch": "cd web-interface/frontend && npm test",
+    "memory": "node core/auto-memory-logger.cjs",
+    "memory:test": "node test-auto-memory.cjs",
+    "memory:view": "cat memory/context/CURRENT-STATE.json",
+    "memory:today": "cat memory/daily/$(date +%Y-%m-%d).md"
   },
   "keywords": [
     "jarvis",
