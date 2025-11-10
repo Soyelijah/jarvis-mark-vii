@@ -79,7 +79,9 @@
       "Bash(gh run:*)",
       "Bash(memory/.gitignore)",
       "Bash(npm run memory:update-context:*)",
-      "Bash(head:*)"
+      "Bash(head:*)",
+      "Bash(npm run:*)",
+      "Bash(npm test)"
     ],
     "deny": [],
     "ask": []
