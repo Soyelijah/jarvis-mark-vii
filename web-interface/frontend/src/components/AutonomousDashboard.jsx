@@ -15,6 +15,7 @@ import SessionHistory from './SessionHistory';
 import ReportsViewer from './ReportsViewer';
 import NotificationCenter from './NotificationCenter';
 import CodeSearch from './CodeSearch';
+import DocGenerator from './DocGenerator';
 
 const AutonomousDashboard = ({ socket }) => {
   // Estado del agente
@@ -442,6 +443,16 @@ const AutonomousDashboard = ({ socket }) => {
         >
           🔍 Búsqueda
         </button>
+        <button
+          onClick={() => setActiveTab('docs')}
+          className={`px-6 py-3 font-semibold transition-all ${
+            activeTab === 'docs'
+              ? 'text-cyan-400 border-b-2 border-cyan-400'
+              : 'text-gray-400 hover:text-white'
+          }`}
+        >
+          📚 Documentación
+        </button>
       </div>
 
       {/* Dashboard Tab */}
@@ -670,6 +681,11 @@ const AutonomousDashboard = ({ socket }) => {
       {/* Search Tab */}
       {activeTab === 'search' && (
         <CodeSearch socket={socket} />
+      )}
+
+      {/* Documentation Tab */}
+      {activeTab === 'docs' && (
+        <DocGenerator socket={socket} />
       )}
     </div>
   );

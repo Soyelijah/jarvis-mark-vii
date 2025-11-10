@@ -28,6 +28,9 @@ const AutonomousIntegration = require('./autonomous-integration.cjs');
 // Code Search Integration - Intelligent Code Search
 const CodeSearchIntegration = require('./code-search-integration.cjs');
 
+// Doc Generator Integration - Automatic Documentation
+const DocGeneratorIntegration = require('./doc-generator-integration.cjs');
+
 // Simple logger for engines
 const logger = {
   info: (msg) => console.log(msg),
@@ -1118,6 +1121,11 @@ io.on('connection', (socket) => {
   if (global.codeSearchIntegration) {
     global.codeSearchIntegration.setupSocketHandlers(socket);
   }
+
+  // Setup Doc Generator socket handlers (will be initialized later)
+  if (global.docGeneratorIntegration) {
+    global.docGeneratorIntegration.setupSocketHandlers(socket);
+  }
 });
 
 // ===== ERROR HANDLING =====
@@ -1175,6 +1183,17 @@ server.listen(PORT, async () => {
     console.log('🔍 Code Search integrado con panel web');
   } catch (error) {
     console.error('❌ Error inicializando Code Search:', error.message);
+  }
+
+  // ============ DOC GENERATOR INTEGRATION ============
+  const docGeneratorIntegration = new DocGeneratorIntegration(io, codeSearchIntegration);
+  global.docGeneratorIntegration = docGeneratorIntegration; // Make available globally
+
+  try {
+    await docGeneratorIntegration.initialize();
+    console.log('📚 Doc Generator integrado con panel web');
+  } catch (error) {
+    console.error('❌ Error inicializando Doc Generator:', error.message);
   }
 
   // Graceful shutdown
