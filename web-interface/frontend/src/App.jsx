@@ -16,6 +16,7 @@ import NotificationToast from './components/NotificationToast';
 import CommandPalette from './components/CommandPalette';
 import ProactiveAlerts from './components/ProactiveAlerts';
 import LearningAnalytics from './components/LearningAnalytics';
+import AutonomousDashboard from './components/AutonomousDashboard';
 
 function App() {
   const [socket, setSocket] = useState(null);
@@ -169,9 +170,10 @@ function App() {
           {[
             { id: 'chat', label: '💬 Chat', icon: '💬' },
             { id: 'dashboard', label: '📊 Dashboard', icon: '📊' },
-            { id: 'proactive', label: '🤖 Proactive', icon: '🤖' },
+            { id: 'autonomous', label: '🤖 Autonomous', icon: '🤖' },
+            { id: 'proactive', label: '⚡ Proactive', icon: '⚡' },
             { id: 'learning', label: '🧠 Learning', icon: '🧠' },
-            { id: 'monitor', label: '⚡ Monitor', icon: '⚡' },
+            { id: 'monitor', label: '📡 Monitor', icon: '📡' },
             { id: 'terminal', label: '🖥️ Terminal', icon: '🖥️' },
             { id: 'memories', label: '📝 Memorias', icon: '📝' },
             { id: 'tasks', label: '✅ Tareas', icon: '✅' },
@@ -217,6 +219,9 @@ function App() {
         )}
         {activePanel === 'proactive' && (
           <ProactiveAlerts socket={socket} />
+        )}
+        {activePanel === 'autonomous' && (
+          <AutonomousDashboard socket={socket} />
         )}
         {activePanel === 'learning' && (
           <LearningAnalytics socket={socket} />

@@ -22,6 +22,9 @@ const JarvisBridge = require('./jarvis-bridge.cjs');
 // Proactive Integration - Real-time code monitoring
 const ProactiveIntegration = require('./proactive-integration.cjs');
 
+// Autonomous Integration - Autonomous Agent System
+const AutonomousIntegration = require('./autonomous-integration.cjs');
+
 // Simple logger for engines
 const logger = {
   info: (msg) => console.log(msg),
@@ -1102,6 +1105,11 @@ io.on('connection', (socket) => {
   socket.on('ping', () => {
     socket.emit('pong', { timestamp: new Date().toISOString() });
   });
+
+  // Setup Autonomous Agent socket handlers (will be initialized later)
+  if (global.autonomousIntegration) {
+    global.autonomousIntegration.setupSocketHandlers(socket);
+  }
 });
 
 // ===== ERROR HANDLING =====
@@ -1137,6 +1145,17 @@ server.listen(PORT, async () => {
     console.log('⚡ Proactive Mode integrado con panel web');
   } catch (error) {
     console.error('❌ Error inicializando Proactive Mode:', error.message);
+  }
+
+  // Initialize Autonomous Integration
+  const autonomousIntegration = new AutonomousIntegration(io);
+  global.autonomousIntegration = autonomousIntegration; // Make available globally
+
+  try {
+    await autonomousIntegration.initialize();
+    console.log('🤖 Autonomous Agent integrado con panel web');
+  } catch (error) {
+    console.error('❌ Error inicializando Autonomous Agent:', error.message);
   }
 
   // Graceful shutdown
