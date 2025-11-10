@@ -24,8 +24,7 @@
     "memory:test": "node test-auto-memory.cjs",
     "memory:view": "cat memory/context/CURRENT-STATE.json",
     "memory:today": "cat memory/daily/$(date +%Y-%m-%d).md",
-    "memory:update-context": "node core/update-claude-context.cjs",
-    "save-and-exit": "node save-and-exit.cjs"
+    "memory:update-context": "node core/update-claude-context.cjs"
   },
   "keywords": [
     "jarvis",

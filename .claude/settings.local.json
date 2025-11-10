@@ -76,7 +76,10 @@
       "Bash(gh auth status:*)",
       "Bash(gh repo create:*)",
       "Bash(git push:*)",
-      "Bash(gh run:*)"
+      "Bash(gh run:*)",
+      "Bash(memory/.gitignore)",
+      "Bash(npm run memory:update-context:*)",
+      "Bash(head:*)"
     ],
     "deny": [],
     "ask": []
