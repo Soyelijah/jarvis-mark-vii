@@ -72,7 +72,11 @@
       "Bash(while read dir)",
       "Bash(do rm -rf \"$dir\")",
       "Bash(done)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(gh auth status:*)",
+      "Bash(gh repo create:*)",
+      "Bash(git push:*)",
+      "Bash(gh run:*)"
     ],
     "deny": [],
     "ask": []

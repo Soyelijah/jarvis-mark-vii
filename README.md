@@ -300,16 +300,81 @@ Edita: `memory/MEMORIA-INICIAL.md`
 
 ---
 
+## 💼 Versiones & Licenciamiento
+
+### Community Edition (Este Repositorio)
+
+**Licencia:** MIT Open Source
+**Precio:** Gratis
+**Incluye:**
+- ✅ Panel web completo con 7 paneles
+- ✅ Chat con IA local (Ollama)
+- ✅ Dashboard con gráficas en tiempo real
+- ✅ Sistema de memoria persistente
+- ✅ 57 módulos core
+- ✅ Soporte comunitario
+
+**Ideal para:** Uso personal, aprendizaje, proyectos pequeños
+
+---
+
+### Enterprise Edition (Disponible bajo consulta)
+
+**Licencia:** Comercial
+**Incluye todo lo anterior PLUS:**
+- ⚡ Integración con Claude API (GPT-4 level)
+- ⚡ Multi-tenancy y gestión de usuarios
+- ⚡ Autenticación SSO/SAML
+- ⚡ Analytics avanzado y reportes
+- ⚡ Compliance (GDPR, SOC2)
+- ⚡ White-label customization
+- ⚡ Soporte prioritario 24/7
+- ⚡ SLA guarantees
+- ⚡ Deployment asistido
+
+**Precio:** Desde $10,000 USD
+**Ideal para:** Empresas, equipos, uso comercial
+
+📧 **Contacto Enterprise:** [Crear issue](https://github.com/Soyelijah/jarvis-mark-vii/issues/new?template=enterprise.md)
+
+---
+
+## 🛠️ Servicios Profesionales
+
+¿Necesitas ayuda implementando o personalizando J.A.R.V.I.S.?
+
+### Consultorías Disponibles:
+
+| Servicio | Descripción | Precio |
+|----------|-------------|--------|
+| **Setup & Deployment** | Instalación y configuración completa | $2,000 - $5,000 |
+| **Custom Features** | Desarrollo de funcionalidades específicas | $150 - $300/hora |
+| **Integración Empresarial** | Conectar con sistemas existentes | $5,000 - $20,000 |
+| **Training & Soporte** | Capacitación para tu equipo | $1,500/día |
+| **Mantenimiento** | Soporte mensual y actualizaciones | $500 - $2,000/mes |
+
+📧 **Agendar consulta:** [Contacto](https://github.com/Soyelijah/jarvis-mark-vii/issues/new?template=consulting.md)
+
+---
+
 ## 💎 Valor del Proyecto
 
-**Estimación comercial:** $10,000 - $50,000 USD
+**Community Edition:** Gratis (Open Source)
+**Valor de Desarrollo Estimado:** $50,000 - $100,000 USD
 
-Rivaliza con:
+**Rivaliza con:**
 - ChatGPT (chat con IA)
-- Datadog/Grafana (dashboard)
+- Datadog/Grafana (dashboard con métricas)
 - VSCode (command palette)
 - Raycast (búsqueda universal)
-- Slack (notificaciones)
+- Slack (notificaciones en tiempo real)
+
+**Casos de uso comercial:**
+- Asistente personal para CEOs/ejecutivos
+- Dashboard de monitoreo empresarial
+- Sistema de automatización interno
+- Prototipo de productos IA
+- Herramienta de productividad para equipos
 
 ---
 
