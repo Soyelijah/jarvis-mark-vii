@@ -12,6 +12,7 @@ import MetricsChart, {
   createMemoryDistributionData
 } from './MetricsChart';
 import SessionHistory from './SessionHistory';
+import ReportsViewer from './ReportsViewer';
 
 const AutonomousDashboard = ({ socket }) => {
   // Estado del agente
@@ -416,6 +417,16 @@ const AutonomousDashboard = ({ socket }) => {
         >
           📜 Historial
         </button>
+        <button
+          onClick={() => setActiveTab('reports')}
+          className={`px-6 py-3 font-semibold transition-all ${
+            activeTab === 'reports'
+              ? 'text-cyan-400 border-b-2 border-cyan-400'
+              : 'text-gray-400 hover:text-white'
+          }`}
+        >
+          📊 Reportes
+        </button>
       </div>
 
       {/* Dashboard Tab */}
@@ -634,6 +645,11 @@ const AutonomousDashboard = ({ socket }) => {
       {/* History Tab */}
       {activeTab === 'history' && (
         <SessionHistory sessions={sessions} />
+      )}
+
+      {/* Reports Tab */}
+      {activeTab === 'reports' && (
+        <ReportsViewer socket={socket} />
       )}
     </div>
   );

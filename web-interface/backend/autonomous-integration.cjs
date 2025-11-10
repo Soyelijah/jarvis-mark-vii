@@ -313,6 +313,79 @@ class AutonomousIntegration {
         });
       }
     });
+
+    // =============== MAINTENANCE & REPORTS ===============
+
+    // Obtener lista de reportes
+    socket.on('maintenance:get-reports', () => {
+      try {
+        if (!this.isInitialized) {
+          socket.emit('maintenance:reports-list', []);
+          return;
+        }
+
+        const reports = this.agent.getAvailableReports();
+        socket.emit('maintenance:reports-list', reports);
+      } catch (error) {
+        socket.emit('autonomous:error', {
+          message: error.message
+        });
+      }
+    });
+
+    // Obtener contenido de un reporte específico
+    socket.on('maintenance:get-report', (filename) => {
+      try {
+        if (!this.isInitialized) {
+          socket.emit('maintenance:report-content', null);
+          return;
+        }
+
+        const report = this.agent.getReport(filename);
+        socket.emit('maintenance:report-content', report);
+      } catch (error) {
+        socket.emit('autonomous:error', {
+          message: error.message
+        });
+      }
+    });
+
+    // Generar reporte manualmente
+    socket.on('maintenance:generate-report', async (type) => {
+      try {
+        if (!this.isInitialized) {
+          await this.initialize();
+        }
+
+        const report = await this.agent.generateReport(type);
+        socket.emit('maintenance:report-generated', report);
+
+        // Enviar lista actualizada
+        const reports = this.agent.getAvailableReports();
+        socket.emit('maintenance:reports-list', reports);
+      } catch (error) {
+        socket.emit('autonomous:error', {
+          message: error.message
+        });
+      }
+    });
+
+    // Obtener estado del maintenance scheduler
+    socket.on('maintenance:get-status', () => {
+      try {
+        if (!this.isInitialized) {
+          socket.emit('maintenance:status', { isRunning: false });
+          return;
+        }
+
+        const status = this.agent.getMaintenanceStatus();
+        socket.emit('maintenance:status', status);
+      } catch (error) {
+        socket.emit('autonomous:error', {
+          message: error.message
+        });
+      }
+    });
   }
 
   /**
