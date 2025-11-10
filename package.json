@@ -6,6 +6,9 @@
   "type": "module",
   "scripts": {
     "start": "node app.js",
+    "jarvis": "node jarvis-complete.js",
+    "autonomous": "node test-autonomous-agent.js",
+    "web-intel": "node test-web-intelligence.js",
     "pure": "node jarvis-pure-start.js",
     "pure:memory": "node core/jarvis-with-memory.cjs",
     "proactive": "node jarvis-proactive.cjs",
