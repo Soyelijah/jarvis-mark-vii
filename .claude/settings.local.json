@@ -71,7 +71,8 @@
       "Bash(.gitignore)",
       "Bash(while read dir)",
       "Bash(do rm -rf \"$dir\")",
-      "Bash(done)"
+      "Bash(done)",
+      "Bash(git commit:*)"
     ],
     "deny": [],
     "ask": []
