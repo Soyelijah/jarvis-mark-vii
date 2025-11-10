@@ -19,6 +19,9 @@ const MetricsEngine = require('../../core/metrics-engine.cjs');
 // JARVIS Bridge - Integración con sistema completo
 const JarvisBridge = require('./jarvis-bridge.cjs');
 
+// Proactive Integration - Real-time code monitoring
+const ProactiveIntegration = require('./proactive-integration.cjs');
+
 // Simple logger for engines
 const logger = {
   info: (msg) => console.log(msg),
@@ -1111,7 +1114,7 @@ app.use((err, req, res, next) => {
 // ===== START SERVER =====
 
 const PORT = process.env.PORT || 3001;
-server.listen(PORT, () => {
+server.listen(PORT, async () => {
   console.log('');
   console.log('╔═══════════════════════════════════════════════════════════╗');
   console.log('║                                                           ║');
@@ -1122,6 +1125,29 @@ server.listen(PORT, () => {
   console.log(`🌐 Backend API ejecutándose en puerto ${PORT}`);
   console.log(`📊 API REST: http://localhost:${PORT}/api`);
   console.log(`🔌 WebSocket: ws://localhost:${PORT}`);
+
+  // Initialize Proactive Integration
+  const proactiveIntegration = new ProactiveIntegration(io, {
+    enabled: process.env.PROACTIVE_MODE !== 'false', // Habilitado por defecto
+    projectRoot: path.resolve(__dirname, '../..')
+  });
+
+  try {
+    await proactiveIntegration.initialize();
+    console.log('⚡ Proactive Mode integrado con panel web');
+  } catch (error) {
+    console.error('❌ Error inicializando Proactive Mode:', error.message);
+  }
+
+  // Graceful shutdown
+  process.on('SIGTERM', async () => {
+    console.log('\n🛑 SIGTERM recibido, cerrando gracefully...');
+    await proactiveIntegration.stop();
+    server.close(() => {
+      console.log('✅ Servidor cerrado');
+      process.exit(0);
+    });
+  });
   console.log('');
   console.log('✅ Todos los sistemas operacionales. Como siempre.');
   console.log('');

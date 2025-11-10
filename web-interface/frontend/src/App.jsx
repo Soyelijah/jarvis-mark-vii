@@ -14,6 +14,7 @@ import SystemMonitor from './components/SystemMonitor';
 import TerminalPanel from './components/TerminalPanel';
 import NotificationToast from './components/NotificationToast';
 import CommandPalette from './components/CommandPalette';
+import ProactiveAlerts from './components/ProactiveAlerts';
 
 function App() {
   const [socket, setSocket] = useState(null);
@@ -167,6 +168,7 @@ function App() {
           {[
             { id: 'chat', label: '💬 Chat', icon: '💬' },
             { id: 'dashboard', label: '📊 Dashboard', icon: '📊' },
+            { id: 'proactive', label: '🤖 Proactive', icon: '🤖' },
             { id: 'monitor', label: '⚡ Monitor', icon: '⚡' },
             { id: 'terminal', label: '🖥️ Terminal', icon: '🖥️' },
             { id: 'memories', label: '🧠 Memorias', icon: '🧠' },
@@ -210,6 +212,9 @@ function App() {
         )}
         {activePanel === 'projects' && (
           <ProjectsPanel projects={data.projects} />
+        )}
+        {activePanel === 'proactive' && (
+          <ProactiveAlerts socket={socket} />
         )}
       </main>
 
