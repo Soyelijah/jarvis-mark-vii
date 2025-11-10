@@ -34,6 +34,9 @@ const DocGeneratorIntegration = require('./doc-generator-integration.cjs');
 // Voice Control Integration - Voice Commands & Chat
 const VoiceControlIntegration = require('./voice-control-integration.cjs');
 
+// Scheduler Integration - Task Scheduling & Workflows
+const SchedulerIntegration = require('./scheduler-integration.cjs');
+
 // Simple logger for engines
 const logger = {
   info: (msg) => console.log(msg),
@@ -1134,6 +1137,11 @@ io.on('connection', (socket) => {
   if (global.voiceControlIntegration) {
     global.voiceControlIntegration.setupSocketHandlers(socket);
   }
+
+  // Setup Scheduler socket handlers (will be initialized later)
+  if (global.schedulerIntegration) {
+    global.schedulerIntegration.setupSocketHandlers(socket);
+  }
 });
 
 // ===== ERROR HANDLING =====
@@ -1217,6 +1225,21 @@ server.listen(PORT, async () => {
     console.log('🎤 Voice Control integrado con panel web');
   } catch (error) {
     console.error('❌ Error inicializando Voice Control:', error.message);
+  }
+
+  // ============ SCHEDULER INTEGRATION ============
+  const schedulerIntegration = new SchedulerIntegration(io, {
+    autonomousIntegration,
+    codeSearchIntegration,
+    docGeneratorIntegration
+  });
+  global.schedulerIntegration = schedulerIntegration; // Make available globally
+
+  try {
+    await schedulerIntegration.initialize();
+    console.log('⏰ Task Scheduler & Workflows integrado con panel web');
+  } catch (error) {
+    console.error('❌ Error inicializando Scheduler:', error.message);
   }
 
   // Graceful shutdown

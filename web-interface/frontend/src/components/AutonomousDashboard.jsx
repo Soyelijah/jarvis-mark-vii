@@ -17,6 +17,7 @@ import NotificationCenter from './NotificationCenter';
 import CodeSearch from './CodeSearch';
 import DocGenerator from './DocGenerator';
 import VoiceControl from './VoiceControl';
+import TaskScheduler from './TaskScheduler';
 
 const AutonomousDashboard = ({ socket }) => {
   // Estado del agente
@@ -492,6 +493,16 @@ const AutonomousDashboard = ({ socket }) => {
         >
           🎤 Voz
         </button>
+        <button
+          onClick={() => setActiveTab('scheduler')}
+          className={`px-6 py-3 font-semibold transition-all ${
+            activeTab === 'scheduler'
+              ? 'text-cyan-400 border-b-2 border-cyan-400'
+              : 'text-gray-400 hover:text-white'
+          }`}
+        >
+          ⏰ Tareas
+        </button>
       </div>
 
       {/* Dashboard Tab */}
@@ -732,6 +743,11 @@ const AutonomousDashboard = ({ socket }) => {
         <div className="h-[calc(100vh-220px)]">
           <VoiceControl socket={socket} onAction={handleVoiceAction} />
         </div>
+      )}
+
+      {/* Task Scheduler Tab */}
+      {activeTab === 'scheduler' && (
+        <TaskScheduler socket={socket} />
       )}
     </div>
   );
