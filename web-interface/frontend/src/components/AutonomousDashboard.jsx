@@ -23,6 +23,7 @@ import Settings from './Settings';
 import BackupManager from './BackupManager';
 import TestRunner from './TestRunner';
 import UserManagement from './UserManagement';
+import PerformanceDashboard from './PerformanceDashboard';
 
 const AutonomousDashboard = ({ socket }) => {
   // Estado del agente
@@ -558,6 +559,16 @@ const AutonomousDashboard = ({ socket }) => {
         >
           🔐 Seguridad
         </button>
+        <button
+          onClick={() => setActiveTab('performance')}
+          className={`px-6 py-3 font-semibold transition-all ${
+            activeTab === 'performance'
+              ? 'text-cyan-400 border-b-2 border-cyan-400'
+              : 'text-gray-400 hover:text-white'
+          }`}
+        >
+          ⚡ Performance
+        </button>
       </div>
 
       {/* Dashboard Tab */}
@@ -828,6 +839,11 @@ const AutonomousDashboard = ({ socket }) => {
       {/* Security Tab */}
       {activeTab === 'security' && (
         <UserManagement socket={socket} currentUser={null} />
+      )}
+
+      {/* Performance Tab */}
+      {activeTab === 'performance' && (
+        <PerformanceDashboard socket={socket} />
       )}
     </div>
   );

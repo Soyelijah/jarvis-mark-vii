@@ -52,6 +52,9 @@ const TestIntegration = require('./test-integration.cjs');
 // Auth Integration - Security & Authentication
 const AuthIntegration = require('./auth-integration.cjs');
 
+// Performance Integration - Performance Monitoring & Optimization
+const PerformanceIntegration = require('./performance-integration.cjs');
+
 // Simple logger for engines
 const logger = {
   info: (msg) => console.log(msg),
@@ -1182,6 +1185,11 @@ io.on('connection', (socket) => {
   if (global.authIntegration) {
     global.authIntegration.setupSocketHandlers(socket);
   }
+
+  // Setup Performance socket handlers (will be initialized later)
+  if (global.performanceIntegration) {
+    global.performanceIntegration.setupSocketHandlers(socket);
+  }
 });
 
 // ===== ERROR HANDLING =====
@@ -1335,6 +1343,17 @@ server.listen(PORT, async () => {
     console.log('🔐 Security & Authentication integrado con panel web');
   } catch (error) {
     console.error('❌ Error inicializando Auth:', error.message);
+  }
+
+  // ============ PERFORMANCE INTEGRATION ============
+  const performanceIntegration = new PerformanceIntegration(io);
+  global.performanceIntegration = performanceIntegration; // Make available globally
+
+  try {
+    await performanceIntegration.initialize();
+    console.log('⚡ Performance Monitoring & Optimization integrado con panel web');
+  } catch (error) {
+    console.error('❌ Error inicializando Performance:', error.message);
   }
 
   // Graceful shutdown
