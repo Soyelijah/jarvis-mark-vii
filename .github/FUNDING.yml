@@ -1,0 +1,11 @@
+# GitHub Sponsors configuration
+# Add your payment/sponsorship links here
+
+# Replace with your GitHub Sponsors username
+github: # Soyelijah
+
+# Other sponsorship platforms
+patreon: # your-patreon
+open_collective: # your-collective
+ko_fi: # your-kofi
+custom: ['https://github.com/Soyelijah/jarvis-mark-vii/issues/new?template=enterprise.md']
