@@ -128,8 +128,10 @@ Remember: YOU ARE AN INTELLIGENT ASSISTANT. Think before responding. Match your 
 
       return true;
     } catch (error) {
-      console.error('❌ Error conectando con Ollama:', error.message);
-      console.log('💡 Asegúrese de que Ollama esté corriendo: ollama serve');
+      // Ollama es opcional, no debe detener el servidor
+      console.warn('⚠️  Ollama no disponible (opcional):', error.message);
+      console.log('💡 Para habilitar IA local ilimitada: ollama serve');
+      console.log('ℹ️  El sistema continuará funcionando con Claude API');
       return false;
     }
   }
