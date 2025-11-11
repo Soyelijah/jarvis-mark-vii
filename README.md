@@ -1,13 +1,21 @@
-# 🤖 JARVIS v2.0 - Sistema Autónomo Completo
+# 🤖 JARVIS v2.0.0 - Sistema Autónomo Completo
 
 > *"Just A Rather Very Intelligent System"* - El asistente de IA más avanzado, 100% local y gratuito
 
 ![Status](https://img.shields.io/badge/Status-Production%20Ready-brightgreen)
-![Version](https://img.shields.io/badge/Version-2.0-blue)
+![Version](https://img.shields.io/badge/Version-2.0.0-blue)
 ![Node](https://img.shields.io/badge/Node-18%2B-green)
-![React](https://img.shields.io/badge/React-18-blue)
+![Port](https://img.shields.io/badge/Port-7777-orange)
 ![Tests](https://img.shields.io/badge/Tests-Passing-brightgreen)
+![Errors](https://img.shields.io/badge/Errors-0-success)
+![Warnings](https://img.shields.io/badge/Warnings-0-success)
 ![License](https://img.shields.io/badge/License-MIT-blue)
+
+### ✨ Nuevo en v2.0.0
+- ✅ **Puerto personalizado 7777** (no estándar)
+- ✅ **Inicio limpio** - 0 errores, 0 advertencias
+- ✅ **Scripts de gestión** - start/stop/status-jarvis.bat
+- ✅ **12 sistemas integrados** - Todos operacionales
 
 ---
 
@@ -31,21 +39,23 @@
 INICIAR-TODO.bat
 ```
 
-### **Opción 2: Manual**
+### **Opción 2: Manual (Recomendado)**
 ```bash
-# Terminal 1: Ollama
-ollama serve
+# Windows: Usar script
+start-jarvis.bat
 
-# Terminal 2: Backend
+# O manualmente:
 cd web-interface/backend
 node server.cjs
-
-# Terminal 3: Frontend
-cd web-interface/frontend
-npm run dev
 ```
 
-Luego abre: **http://localhost:5173**
+Luego abre: **http://localhost:7777**
+
+**Credenciales por defecto:**
+- 👤 Usuario: `admin`
+- 🔑 Password: `jarvis2024`
+
+⚠️ **IMPORTANTE**: Cambia la contraseña en el primer login
 
 ---
 
@@ -462,13 +472,16 @@ ollama list
 ### **Problema: Dashboard no carga**
 ```bash
 # Verificar backend
-curl http://localhost:3001/api/status
+curl http://localhost:7777/api/status
 
-# Verificar frontend
-curl http://localhost:5173
+# O abrir directamente
+http://localhost:7777
 
 # Ver logs en consola
 cd web-interface/backend && node server.cjs
+
+# Verificar puerto
+netstat -ano | findstr :7777
 ```
 
 ### **Problema: Base de datos corrupta**
@@ -482,12 +495,15 @@ cp backups/metrics-2025-11-10.db memory/metrics.db
 
 ### **Problema: Puerto ocupado**
 ```bash
-# Windows: Encontrar proceso en puerto 3001
-netstat -ano | findstr :3001
+# Windows: Encontrar proceso en puerto 7777
+netstat -ano | findstr :7777
 taskkill /PID <PID> /F
 
+# O usar el script:
+stop-jarvis.bat
+
 # Linux/Mac:
-lsof -i :3001
+lsof -i :7777
 kill -9 <PID>
 ```
 
