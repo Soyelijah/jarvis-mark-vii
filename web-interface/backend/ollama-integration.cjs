@@ -129,9 +129,7 @@ Remember: YOU ARE AN INTELLIGENT ASSISTANT. Think before responding. Match your 
       return true;
     } catch (error) {
       // Ollama es opcional, no debe detener el servidor
-      console.warn('⚠️  Ollama no disponible (opcional):', error.message);
-      console.log('💡 Para habilitar IA local ilimitada: ollama serve');
-      console.log('ℹ️  El sistema continuará funcionando con Claude API');
+      // Silencioso: no mostrar advertencia en consola para mantener logs limpios
       return false;
     }
   }

@@ -22,23 +22,23 @@ if %ERRORLEVEL% NEQ 0 (
     exit /b 1
 )
 
-REM Verificar si el puerto 3001 está en uso
-netstat -ano | findstr :3001 >nul 2>nul
+REM Verificar si el puerto 7777 está en uso
+netstat -ano | findstr :7777 >nul 2>nul
 if %ERRORLEVEL% EQU 0 (
-    echo ⚠️  ADVERTENCIA: El puerto 3001 ya está en uso
+    echo ⚠️  ADVERTENCIA: El puerto 7777 ya está en uso
     echo.
     echo ¿Deseas detener el proceso existente y reiniciar JARVIS?
     choice /C SN /M "S=Si, N=No"
     if errorlevel 2 (
         echo.
-        echo ℹ️  JARVIS probablemente ya está corriendo en http://localhost:3001
+        echo ℹ️  JARVIS probablemente ya está corriendo en http://localhost:7777
         echo.
         pause
         exit /b 0
     )
 
-    REM Detener procesos en el puerto 3001
-    for /f "tokens=5" %%a in ('netstat -ano ^| findstr :3001') do (
+    REM Detener procesos en el puerto 7777
+    for /f "tokens=5" %%a in ('netstat -ano ^| findstr :7777') do (
         taskkill /F /PID %%a >nul 2>nul
     )
     echo ✅ Proceso anterior detenido
@@ -61,7 +61,7 @@ timeout /t 5 >nul
 echo.
 echo ✅ JARVIS iniciado exitosamente
 echo.
-echo 🌐 Accede al dashboard en: http://localhost:3001
+echo 🌐 Accede al dashboard en: http://localhost:7777
 echo.
 echo 📋 Credenciales por defecto:
 echo    👤 Usuario: admin
@@ -75,7 +75,7 @@ echo.
 REM Abrir navegador automáticamente
 choice /C SN /M "¿Abrir el dashboard en el navegador?"
 if errorlevel 1 if not errorlevel 2 (
-    start http://localhost:3001
+    start http://localhost:7777
 )
 
 pause

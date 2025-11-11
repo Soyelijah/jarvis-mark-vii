@@ -9,7 +9,7 @@ const socketIo = require('socket.io');
 const path = require('path');
 const fs = require('fs-extra');
 const si = require('systeminformation');
-require('dotenv').config();
+require('dotenv').config({ path: path.join(__dirname, '../../.env') });
 
 // FASE 6 - Automation Engines
 const AutomationEngine = require('../../core/automation-engine.cjs');

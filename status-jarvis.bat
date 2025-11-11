@@ -12,16 +12,16 @@ echo ║                                                           ║
 echo ╚═══════════════════════════════════════════════════════════╝
 echo.
 
-REM Verificar si el puerto 3001 está en uso
-netstat -ano | findstr :3001 >nul 2>nul
+REM Verificar si el puerto 7777 está en uso
+netstat -ano | findstr :7777 >nul 2>nul
 if %ERRORLEVEL% EQU 0 (
     echo ✅ JARVIS está CORRIENDO
     echo.
-    echo 🌐 Dashboard: http://localhost:3001
+    echo 🌐 Dashboard: http://localhost:7777
     echo.
     echo 📊 Procesos activos:
     echo.
-    for /f "tokens=5" %%a in ('netstat -ano ^| findstr :3001') do (
+    for /f "tokens=5" %%a in ('netstat -ano ^| findstr :7777') do (
         echo    🔹 PID: %%a
         for /f "tokens=1" %%b in ('tasklist ^| findstr %%a') do (
             echo       Proceso: %%b
