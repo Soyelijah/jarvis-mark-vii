@@ -33,12 +33,64 @@ class ProactiveIntegration {
    * Inicializa la integración
    */
   async initialize() {
-    // Deshabilitar temporalmente Proactive Mode para evitar errores de bind
-    // TODO: Revisar ProactiveAgent constructor para inicialización correcta
-    console.log('ℹ️  [Proactive Integration] Temporalmente deshabilitado');
-    console.log('   (Funcionalidad avanzada en desarrollo)');
-    this.isEnabled = false;
-    return;
+    if (!this.isEnabled) {
+      console.log('⚠️  [Proactive Integration] Deshabilitado en configuración');
+      return;
+    }
+
+    console.log('🚀 [Proactive Integration] Inicializando...');
+
+    try {
+      // Inicializar Proactive Agent
+      this.proactiveAgent = new ProactiveAgent({
+        projectRoot: this.projectRoot,
+        enabled: true,
+        autoAnalyze: true,
+        learningEnabled: true,
+        notifyOnBugs: true,
+        notifyOnSecurity: true,
+        notifyOnPerformance: true
+      });
+
+      // Inicializar Fix Engine
+      this.fixEngine = new FixEngine({
+        projectRoot: this.projectRoot
+      });
+
+      // Inicializar Git Manager
+      this.gitManager = new GitManager({
+        projectRoot: this.projectRoot,
+        autoCommit: false // Requiere aprobación manual
+      });
+
+      // Inicializar Pattern Database
+      this.patternDatabase = new PatternDatabase({
+        dbPath: `${this.projectRoot}/memory/patterns.db`
+      });
+
+      await this.patternDatabase.initialize();
+
+      // Setup listeners
+      this.setupProactiveListeners();
+      this.setupGitListeners();
+      this.setupSocketListeners();
+
+      // Iniciar Proactive Agent
+      await this.proactiveAgent.start();
+
+      this.stats.startTime = Date.now();
+
+      console.log('✅ [Proactive Integration] Inicializado y activo');
+
+      // Notificar a todos los clientes
+      this.broadcastToAll('proactive:started', {
+        timestamp: Date.now()
+      });
+
+    } catch (error) {
+      console.error('❌ [Proactive Integration] Error en inicialización:', error.message);
+      this.isEnabled = false;
+    }
   }
 
   /**
@@ -163,6 +215,11 @@ class ProactiveIntegration {
    * Configura listeners de Socket.io
    */
   setupSocketListeners() {
+    if (!this.io) {
+      console.warn('⚠️  Socket.io no disponible, skipping Socket listeners');
+      return;
+    }
+
     this.io.on('connection', (socket) => {
       console.log(`🔌 [Proactive Integration] Cliente conectado: ${socket.id}`);
       this.connectedClients.add(socket.id);

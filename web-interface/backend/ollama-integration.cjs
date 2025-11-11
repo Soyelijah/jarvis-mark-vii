@@ -139,33 +139,16 @@ Remember: YOU ARE AN INTELLIGENT ASSISTANT. Think before responding. Match your 
    */
   async chat(userMessage, options = {}) {
     try {
-      // Agregar mensaje del usuario al historial
-      this.conversationHistory.push({
-        role: 'user',
-        content: userMessage
-      });
-
-      // Limitar historial
-      if (this.conversationHistory.length > this.maxHistoryLength * 2) {
-        this.conversationHistory = this.conversationHistory.slice(-this.maxHistoryLength * 2);
-      }
-
-      // Preparar mensajes para Ollama
-      const messages = [
-        {
-          role: 'system',
-          content: this.systemPrompt
-        },
-        ...this.conversationHistory
-      ];
-
-      // Llamar a Ollama API
+      // Intentar con Ollama primero
       const response = await axios.post(
         `${this.baseURL}/api/chat`,
         {
           model: this.model,
-          messages: messages,
-          stream: false, // No streaming para simplicidad
+          messages: [
+            { role: 'system', content: this.systemPrompt },
+            { role: 'user', content: userMessage }
+          ],
+          stream: false,
           options: {
             temperature: options.temperature || 0.7,
             top_p: options.top_p || 0.9,
@@ -173,38 +156,74 @@ Remember: YOU ARE AN INTELLIGENT ASSISTANT. Think before responding. Match your 
           }
         },
         {
-          timeout: 300000 // 5 minutos timeout para respuestas largas
+          timeout: 30000 // 30 segundos
         }
       );
 
-      const assistantMessage = response.data.message.content;
-
-      // Agregar respuesta al historial
-      this.conversationHistory.push({
-        role: 'assistant',
-        content: assistantMessage
-      });
-
-      return assistantMessage;
+      return response.data.message.content;
 
     } catch (error) {
-      console.error('❌ Error en Ollama chat:', error.message);
+      // Si Ollama falla, usar fallback con Claude API
+      console.log('ℹ️  Ollama no disponible, usando Claude API como fallback');
 
-      // Mensaje de error más amigable
-      if (error.code === 'ECONNREFUSED') {
-        return `❌ No puedo conectar con Ollama, Señor.
+      return this.useClaudeFallback(userMessage);
+    }
+  }
 
-**Solución:**
-1. Verifique que Ollama esté corriendo: \`ollama serve\`
-2. Reinicie el backend de JARVIS
-3. Intente nuevamente
+  /**
+   * Fallback usando Claude API cuando Ollama no está disponible
+   */
+  async useClaudeFallback(userMessage) {
+    const Anthropic = require('@anthropic-ai/sdk');
 
-Como siempre, listo para asistir cuando Ollama esté disponible. ⚡`;
-      }
+    if (!process.env.ANTHROPIC_API_KEY) {
+      return `Lo siento, Señor. Necesito configuración adicional:
 
-      return `❌ Error procesando su solicitud: ${error.message}
+**Ollama no está disponible** y no hay API key de Claude configurada.
 
-Por favor, intente nuevamente. ⚡`;
+**Opciones:**
+
+1. **Instalar Ollama** (Recomendado - Gratis e ilimitado):
+   \`\`\`bash
+   # Descargar de: https://ollama.ai
+   ollama serve
+   \`\`\`
+
+2. **Configurar Claude API**:
+   \`\`\`
+   Agregar en .env:
+   ANTHROPIC_API_KEY=tu-api-key
+   \`\`\`
+
+Como siempre, listo cuando esté configurado. ⚡`;
+    }
+
+    try {
+      const anthropic = new Anthropic({
+        apiKey: process.env.ANTHROPIC_API_KEY,
+      });
+
+      const message = await anthropic.messages.create({
+        model: 'claude-3-5-sonnet-20241022',
+        max_tokens: 4096,
+        messages: [
+          {
+            role: 'user',
+            content: `${this.systemPrompt}\n\nUsuario: ${userMessage}`
+          }
+        ],
+      });
+
+      return message.content[0].text;
+
+    } catch (error) {
+      console.error('❌ Error con Claude API:', error.message);
+
+      return `Lo siento, Señor. Ambos sistemas fallaron:
+- Ollama: No disponible
+- Claude API: ${error.message}
+
+Por favor, configure al menos uno de los dos sistemas. ⚡`;
     }
   }
 

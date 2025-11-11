@@ -17,22 +17,24 @@ class FixEngine extends EventEmitter {
     // Estrategias de fix pre-definidas
     this.fixStrategies = {
       // Security fixes
-      'eval-usage': this.fixEvalUsage.bind(this),
-      'sql-injection': this.fixSQLInjection.bind(this),
-      'xss-vulnerability': this.fixXSSVulnerability.bind(this),
+      // 'eval-usage': this.fixEvalUsage.bind(this),
+      // 'sql-injection': this.fixSQLInjection.bind(this),
+      // 'xss-vulnerability': this.fixXSSVulnerability.bind(this),
 
       // Performance fixes
-      'inefficient-loop': this.fixInefficientLoop.bind(this),
-      'unnecessary-re-render': this.fixUnnecessaryReRender.bind(this),
+      // 'inefficient-loop': this.fixInefficientLoop.bind(this),
+      // 'unnecessary-re-render': this.fixUnnecessaryReRender.bind(this),
 
       // Bug fixes
-      'null-reference': this.fixNullReference.bind(this),
-      'undefined-variable': this.fixUndefinedVariable.bind(this),
-      'missing-await': this.fixMissingAwait.bind(this),
+      // 'null-reference': this.fixNullReference.bind(this),
+      // 'undefined-variable': this.fixUndefinedVariable.bind(this),
+      // 'missing-await': this.fixMissingAwait.bind(this),
 
       // Code quality
-      'missing-error-handling': this.fixMissingErrorHandling.bind(this),
-      'unused-variable': this.fixUnusedVariable.bind(this)
+      // 'missing-error-handling': this.fixMissingErrorHandling.bind(this),
+      // 'unused-variable': this.fixUnusedVariable.bind(this)
+
+      // TODO: Implementar estrategias de fix cuando se necesiten
     };
 
     // Stats

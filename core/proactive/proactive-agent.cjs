@@ -53,7 +53,7 @@ class ProactiveAgent extends EventEmitter {
       notificationsSent: 0
     };
 
-    this.setupEventListeners();
+    // NO llamar setupEventListeners aquí - se llama en start()
   }
 
   /**
@@ -146,8 +146,11 @@ class ProactiveAgent extends EventEmitter {
     this.isRunning = true;
     this.startTime = Date.now();
 
-    // Iniciar file watcher
+    // Iniciar file watcher ANTES de configurar listeners
     this.fileWatcher.start();
+
+    // Configurar event listeners DESPUÉS de que FileWatcher esté iniciado
+    this.setupEventListeners();
 
     // Limpiar cache periódicamente
     setInterval(() => {

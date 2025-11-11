@@ -55,6 +55,12 @@ class PatternMatcher extends EventEmitter {
 
     this.patternCache.clear();
 
+    // Validar que patterns sea un array
+    if (!patterns || !Array.isArray(patterns)) {
+      console.warn('⚠️  [Pattern Matcher] No se pudieron cargar patrones de la DB');
+      return;
+    }
+
     patterns.forEach(pattern => {
       const ext = pattern.file_extension || '.js';
 
