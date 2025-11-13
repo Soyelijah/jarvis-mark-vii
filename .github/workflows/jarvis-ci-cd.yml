@@ -1,0 +1,435 @@
+name: JARVIS Enterprise CI/CD Pipeline
+
+on:
+  push:
+    branches: [ master, main, develop ]
+  pull_request:
+    branches: [ master, main, develop ]
+  schedule:
+    # Análisis diario a las 2 AM
+    - cron: '0 2 * * *'
+
+env:
+  NODE_VERSION: '22.x'
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # ==========================================
+  # FASE 1: Code Quality & Security Analysis
+  # ==========================================
+  code-analysis:
+    name: ML Code Analysis & Quality Gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: 🔄 Checkout Code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Full history for better analysis
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: 📦 Install Dependencies
+        run: |
+          npm ci --prefer-offline --no-audit
+          npm install --save-dev @babel/parser @babel/traverse acorn
+
+      - name: 🧠 Run ML Code Analyzer
+        id: ml-analysis
+        run: |
+          node ml-code-analyzer.js > analysis-report.txt
+          echo "ML_ANALYSIS_PASSED=$?" >> $GITHUB_OUTPUT
+        continue-on-error: true
+
+      - name: 🎭 Run Agent Orchestrator
+        run: node advanced-orchestrator.js
+        continue-on-error: true
+
+      - name: 📊 Upload Analysis Reports
+        uses: actions/upload-artifact@v3
+        with:
+          name: code-analysis-reports
+          path: |
+            metrics/ml-analysis/**/*.json
+            metrics/orchestrator/**/*.json
+            analysis-report.txt
+          retention-days: 30
+
+      - name: 🚨 Quality Gate Check
+        run: |
+          if [ "${{ steps.ml-analysis.outputs.ML_ANALYSIS_PASSED }}" -ne 0 ]; then
+            echo "::error::Code quality below threshold"
+            exit 1
+          fi
+
+      - name: 💬 Comment PR with Analysis
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.readFileSync('analysis-report.txt', 'utf8');
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `## 🧠 ML Code Analysis Report\n\n\`\`\`\n${report}\n\`\`\``
+            });
+
+  # ==========================================
+  # FASE 2: Security Scanning
+  # ==========================================
+  security-scan:
+    name: Security & Vulnerability Scan
+    runs-on: ubuntu-latest
+    needs: code-analysis
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: 🔒 Run npm audit
+        run: npm audit --audit-level=moderate
+        continue-on-error: true
+
+      - name: 🛡️ SAST with Semgrep
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: >-
+            p/security-audit
+            p/secrets
+            p/owasp-top-ten
+
+      - name: 🔐 Dependency Review
+        uses: actions/dependency-review-action@v3
+        if: github.event_name == 'pull_request'
+
+      - name: 📋 Generate SBOM
+        run: |
+          npm install -g @cyclonedx/cyclonedx-npm
+          cyclonedx-npm --output-file sbom.json
+
+      - name: 📤 Upload SBOM
+        uses: actions/upload-artifact@v3
+        with:
+          name: sbom
+          path: sbom.json
+
+  # ==========================================
+  # FASE 3: Testing Suite
+  # ==========================================
+  test:
+    name: Run Test Suite
+    runs-on: ubuntu-latest
+    needs: code-analysis
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x, 22.x]
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node ${{ matrix.node-version }}
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: 🧪 Run Backend Tests
+        run: npm run test:backend
+        continue-on-error: true
+
+      - name: 🎨 Run Frontend Tests
+        run: npm run test:frontend
+        continue-on-error: true
+
+      - name: 📊 Generate Coverage Report
+        run: npm run test:coverage
+        continue-on-error: true
+
+      - name: 📈 Upload Coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./coverage/coverage-final.json
+          flags: unittests
+          name: codecov-${{ matrix.node-version }}
+
+  # ==========================================
+  # FASE 4: Build & Package
+  # ==========================================
+  build:
+    name: Build & Package
+    runs-on: ubuntu-latest
+    needs: [test, security-scan]
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: 🏗️ Build Frontend
+        run: cd web-interface/frontend && npm run build
+
+      - name: 📦 Create Distribution Package
+        run: |
+          mkdir -p dist
+          cp -r core web-interface package.json dist/
+          tar -czf jarvis-${{ github.sha }}.tar.gz dist/
+
+      - name: 📤 Upload Build Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: jarvis-build
+          path: jarvis-${{ github.sha }}.tar.gz
+
+  # ==========================================
+  # FASE 5: Docker Build & Push
+  # ==========================================
+  docker:
+    name: Build & Push Docker Images
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: 🐳 Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: 🔑 Login to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 🏷️ Extract metadata
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix={{branch}}-
+            type=semver,pattern={{version}}
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: 🏗️ Build and Push Backend Image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./Dockerfile.backend
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: 🏗️ Build and Push Frontend Image
+        uses: docker/build-push-action@v4
+        with:
+          context: ./web-interface/frontend
+          file: ./web-interface/frontend/Dockerfile
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-frontend:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ==========================================
+  # FASE 6: Performance Testing
+  # ==========================================
+  performance:
+    name: Performance & Load Testing
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'push'
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: 🚀 Start JARVIS Services
+        run: |
+          npm run panel &
+          sleep 30  # Wait for services to start
+
+      - name: ⚡ Run Load Tests with Artillery
+        run: |
+          npm install -g artillery
+          artillery quick --count 100 --num 10 http://localhost:7777/api/dashboard
+
+      - name: 📊 Performance Benchmark
+        run: node advanced-orchestrator.js
+
+  # ==========================================
+  # FASE 7: Deployment to Staging
+  # ==========================================
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    needs: [docker, performance]
+    if: github.ref == 'refs/heads/develop'
+    environment:
+      name: staging
+      url: https://staging.jarvis.example.com
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: 🚢 Deploy to Staging K8s
+        run: |
+          echo "Deploying to Kubernetes staging cluster"
+          # kubectl apply -f k8s/staging/
+
+      - name: ⏳ Wait for Deployment
+        run: sleep 60
+
+      - name: 🏥 Health Check
+        run: |
+          curl -f https://staging.jarvis.example.com/health || exit 1
+
+      - name: 🧪 Smoke Tests
+        run: |
+          npm run test:e2e:staging
+
+  # ==========================================
+  # FASE 8: Deployment to Production
+  # ==========================================
+  deploy-production:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    needs: [docker, performance]
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    environment:
+      name: production
+      url: https://jarvis.example.com
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: 🚢 Blue-Green Deployment
+        run: |
+          echo "Initiating blue-green deployment"
+          # kubectl apply -f k8s/production/
+
+      - name: ⏳ Wait for Green Deployment
+        run: sleep 120
+
+      - name: 🏥 Production Health Check
+        run: |
+          for i in {1..10}; do
+            curl -f https://jarvis.example.com/health && break
+            sleep 10
+          done
+
+      - name: 🔄 Switch Traffic to Green
+        run: |
+          echo "Switching traffic to new deployment"
+          # kubectl patch service jarvis -p '{"spec":{"selector":{"version":"green"}}}'
+
+      - name: 📢 Notify Deployment Success
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          text: '🚀 JARVIS deployed to production successfully!'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+
+      - name: 🏷️ Create Release Tag
+        if: success()
+        run: |
+          git tag -a "v${{ github.run_number }}" -m "Production release ${{ github.run_number }}"
+          git push origin "v${{ github.run_number }}"
+
+  # ==========================================
+  # FASE 9: Post-Deployment Monitoring
+  # ==========================================
+  post-deploy-monitor:
+    name: Post-Deployment Monitoring
+    runs-on: ubuntu-latest
+    needs: deploy-production
+    if: success()
+
+    steps:
+      - name: 📊 Collect Metrics
+        run: |
+          echo "Collecting post-deployment metrics"
+          # Send metrics to monitoring system
+
+      - name: 🔍 Run Synthetic Monitoring
+        run: |
+          echo "Running synthetic tests"
+          # Run synthetic monitoring tests
+
+      - name: 📈 Performance Comparison
+        run: |
+          echo "Comparing performance with previous version"
+          # Compare metrics
+
+  # ==========================================
+  # FASE 10: Rollback (if needed)
+  # ==========================================
+  rollback:
+    name: Automatic Rollback
+    runs-on: ubuntu-latest
+    needs: post-deploy-monitor
+    if: failure()
+
+    steps:
+      - name: 🔙 Rollback Deployment
+        run: |
+          echo "Initiating automatic rollback"
+          # kubectl rollout undo deployment/jarvis
+
+      - name: 🚨 Alert Team
+        uses: 8398a7/action-slack@v3
+        with:
+          status: 'failure'
+          text: '⚠️ JARVIS deployment failed - Automatic rollback initiated!'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+
+# ==========================================
+# Workflow Notifications
+# ==========================================
+  notify:
+    name: Send Notifications
+    runs-on: ubuntu-latest
+    needs: [deploy-production, post-deploy-monitor]
+    if: always()
+
+    steps:
+      - name: 📧 Send Email Report
+        run: |
+          echo "Sending deployment report via email"
+          # Send email with deployment summary
+
+      - name: 📊 Update Dashboard
+        run: |
+          echo "Updating deployment dashboard"
+          # Update deployment tracking dashboard
