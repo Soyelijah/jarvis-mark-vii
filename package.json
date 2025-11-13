@@ -34,6 +34,7 @@
     "memory:update-context": "node core/update-claude-context.cjs",
     "panel": "node web-interface/start-protected-panel.js",
     "demo": "node demo-interactive.js",
+    "demo:auto": "node demo-auto.js",
     "demo:all": "node demo-all-systems.js"
   },
   "keywords": [
