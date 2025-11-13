@@ -16,8 +16,22 @@ coverage/
 # Database files
 *.db
 *.db-journal
+*.db-shm
+*.db-wal
 data/memory-db.json
 data/tasks.json
+
+# AI Runtime Data (generado por sistemas de IA)
+memory/ai-master-state.json
+memory/experience-buffer.json
+memory/knowledge-base.json
+memory/q-learning-agent.json
+memory/user-*-history.json
+memory/*.db-shm
+memory/*.db-wal
+
+# Claude Settings
+.claude/settings.local.json
 
 # IDE
 .vscode/*
