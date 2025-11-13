@@ -1,0 +1,24 @@
+{
+  "general:general:1": {
+    "key": "general:general:1",
+    "examples": [
+      {
+        "input": "Hola JARVIS",
+        "output": "Procesando su solicitud, sir...",
+        "feedback": {
+          "success": true,
+          "responseTime": 3,
+          "confidence": 0.8,
+          "quality": "excellent"
+        },
+        "timestamp": 1762920135497
+      }
+    ],
+    "successRate": 1,
+    "totalAttempts": 1,
+    "successfulAttempts": 1,
+    "averageConfidence": 0.9166666666666666,
+    "lastUpdated": 1762920135498,
+    "weight": 0.9749999999999999
+  }
+}

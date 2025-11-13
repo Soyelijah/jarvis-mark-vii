@@ -1,0 +1,37 @@
+[
+  {
+    "id": "1762920135497-ci6iq8bty",
+    "timestamp": 1762920135497,
+    "features": {
+      "wordCount": 2,
+      "sentimentScore": 0,
+      "complexity": 0.16,
+      "keywords": [
+        "hola",
+        "jarvis"
+      ],
+      "timeOfDay": 1,
+      "dayOfWeek": 3,
+      "userState": "unknown",
+      "previousInteractions": 0,
+      "taskType": "general",
+      "urgency": 0,
+      "domain": "general",
+      "timestamp": 1762920135497
+    },
+    "input": "Hola JARVIS",
+    "output": "Procesando su solicitud, sir...",
+    "context": {
+      "domain": "greeting",
+      "action": "quick_response",
+      "predictions": 0
+    },
+    "feedback": {
+      "success": true,
+      "responseTime": 3,
+      "confidence": 0.8,
+      "quality": "excellent"
+    },
+    "confidence": 0.9166666666666666
+  }
+]

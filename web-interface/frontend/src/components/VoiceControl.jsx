@@ -1,332 +1,266 @@
-// web-interface/frontend/src/components/VoiceControl.jsx
-// Control por Voz y Chat Conversacional
+/**
+ * � JARVIS Voice Control Component
+ *
+ * "Just ask, sir. I'm always listening."
+ * - JARVIS
+ *
+ * Control JARVIS with your voice, Tony Stark style
+ */
 
 import React, { useState, useEffect, useRef } from 'react';
 
-const VoiceControl = ({ socket, onAction }) => {
+const VoiceControl = ({ onCommand, enabled = true }) => {
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
-  const [messages, setMessages] = useState([]);
-  const [inputText, setInputText] = useState('');
-  const [isSpeaking, setIsSpeaking] = useState(false);
-  const [voiceEnabled, setVoiceEnabled] = useState(true);
-  const messagesEndRef = useRef(null);
+  const [lastCommand, setLastCommand] = useState('');
+  const [confidence, setConfidence] = useState(0);
+  const [supported, setSupported] = useState(false);
+
   const recognitionRef = useRef(null);
 
   useEffect(() => {
-    if (!socket) return;
+    // Check if browser supports Speech Recognition
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
 
-    // Escuchar respuestas de comandos
-    socket.on('voice:response', (data) => {
-      addMessage('assistant', data.response, data);
+    if (SpeechRecognition) {
+      setSupported(true);
 
-      // Hablar la respuesta si está habilitado
-      if (voiceEnabled && data.response) {
-        speak(data.response);
-      }
+      const recognition = new SpeechRecognition();
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'es-ES'; // Spanish
 
-      // Ejecutar acción si la hay
-      if (data.action && onAction) {
-        onAction(data.action, data.parameters);
-      }
-    });
+      recognition.onstart = () => {
+        setIsListening(true);
+        console.log('<� Voice recognition started');
+      };
 
-    // Escuchar historial
-    socket.on('voice:history', (history) => {
-      setMessages(history.map(h => ({
-        role: h.type,
-        content: h.text,
-        timestamp: h.timestamp,
-        data: h.data
-      })));
-    });
+      recognition.onend = () => {
+        setIsListening(false);
+        console.log('<� Voice recognition ended');
+      };
 
-    // Solicitar historial inicial
-    socket.emit('voice:get-history');
+      recognition.onresult = (event) => {
+        let interimTranscript = '';
+        let finalTranscript = '';
+
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const result = event.results[i];
+          const transcriptPart = result[0].transcript;
+
+          if (result.isFinal) {
+            finalTranscript += transcriptPart + ' ';
+            setConfidence(result[0].confidence);
+          } else {
+            interimTranscript += transcriptPart;
+          }
+        }
+
+        setTranscript(interimTranscript || finalTranscript);
+
+        if (finalTranscript) {
+          processCommand(finalTranscript.trim(), event.results[event.resultIndex][0].confidence);
+        }
+      };
+
+      recognition.onerror = (event) => {
+        console.error('<� Voice recognition error:', event.error);
+        setIsListening(false);
+      };
+
+      recognitionRef.current = recognition;
+    } else {
+      console.warn('<� Speech Recognition not supported in this browser');
+    }
 
     return () => {
-      socket.off('voice:response');
-      socket.off('voice:history');
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
     };
-  }, [socket, voiceEnabled, onAction]);
-
-  useEffect(() => {
-    // Scroll automático
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
-  useEffect(() => {
-    // Inicializar Web Speech API
-    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      recognitionRef.current = new SpeechRecognition();
-      recognitionRef.current.continuous = false;
-      recognitionRef.current.interimResults = false;
-      recognitionRef.current.lang = 'es-ES';
-
-      recognitionRef.current.onresult = (event) => {
-        const text = event.results[0][0].transcript;
-        setTranscript(text);
-        handleVoiceCommand(text);
-        setIsListening(false);
-      };
-
-      recognitionRef.current.onerror = (event) => {
-        console.error('Error de reconocimiento:', event.error);
-        setIsListening(false);
-      };
-
-      recognitionRef.current.onend = () => {
-        setIsListening(false);
-      };
-    }
   }, []);
 
-  const startListening = () => {
-    if (recognitionRef.current && !isListening) {
-      recognitionRef.current.start();
-      setIsListening(true);
+  const processCommand = (text, conf) => {
+    const lowerText = text.toLowerCase();
+
+    // JARVIS wake word detection
+    if (lowerText.includes('jarvis') || lowerText.includes('jarbi')) {
+      setLastCommand(text);
+
+      // Extract command after "JARVIS"
+      const commandMatch = lowerText.match(/jarvis,?\s*(.+)/i) || lowerText.match(/jarbi,?\s*(.+)/i);
+      const command = commandMatch ? commandMatch[1] : text;
+
+      // Detect command type
+      let commandType = 'unknown';
+      let action = null;
+
+      if (command.match(/test|prueba|probar/i)) {
+        commandType = 'test_ai';
+        action = 'test';
+      } else if (command.match(/predict|predic|anticipa/i)) {
+        commandType = 'predict';
+        action = 'predict';
+      } else if (command.match(/save|guarda|salva/i)) {
+        commandType = 'save';
+        action = 'save';
+      } else if (command.match(/status|estado/i)) {
+        commandType = 'status';
+        action = 'status';
+      } else if (command.match(/learn|aprend/i)) {
+        commandType = 'learn';
+        action = 'learn';
+      } else if (command.match(/stats|estad�sticas/i)) {
+        commandType = 'statistics';
+        action = 'stats';
+      }
+
+      // Call parent callback with command
+      if (onCommand && action) {
+        onCommand({
+          type: commandType,
+          action: action,
+          text: command,
+          confidence: conf,
+          timestamp: Date.now()
+        });
+      }
+
+      // Visual feedback
+      speakResponse(commandType);
     }
   };
 
-  const stopListening = () => {
-    if (recognitionRef.current && isListening) {
-      recognitionRef.current.stop();
-      setIsListening(false);
-    }
-  };
+  const speakResponse = (commandType) => {
+    const responses = {
+      test_ai: 'Ejecutando prueba de IA, sir.',
+      predict: 'Generando predicciones, sir.',
+      save: 'Guardando estado del sistema, sir.',
+      status: 'Mostrando estado del sistema, sir.',
+      learn: 'Iniciando proceso de aprendizaje, sir.',
+      statistics: 'Mostrando estad�sticas, sir.',
+      unknown: 'Comando no reconocido, sir.'
+    };
 
-  const handleVoiceCommand = (text) => {
-    if (!socket || !text.trim()) return;
+    const response = responses[commandType] || responses.unknown;
 
-    addMessage('user', text);
-    socket.emit('voice:command', { text });
-  };
-
-  const handleTextSubmit = (e) => {
-    e.preventDefault();
-    if (!inputText.trim()) return;
-
-    handleVoiceCommand(inputText);
-    setInputText('');
-  };
-
-  const speak = (text) => {
+    // Text-to-Speech
     if ('speechSynthesis' in window) {
-      // Cancelar si ya está hablando
-      window.speechSynthesis.cancel();
-
-      const utterance = new SpeechSynthesisUtterance(text);
+      const utterance = new SpeechSynthesisUtterance(response);
       utterance.lang = 'es-ES';
       utterance.rate = 1.0;
       utterance.pitch = 1.0;
-
-      utterance.onstart = () => setIsSpeaking(true);
-      utterance.onend = () => setIsSpeaking(false);
-
       window.speechSynthesis.speak(utterance);
     }
   };
 
-  const stopSpeaking = () => {
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel();
-      setIsSpeaking(false);
+  const toggleListening = () => {
+    if (!recognitionRef.current) return;
+
+    if (isListening) {
+      recognitionRef.current.stop();
+    } else {
+      recognitionRef.current.start();
     }
   };
 
-  const addMessage = (role, content, data = null) => {
-    setMessages(prev => [...prev, {
-      role,
-      content,
-      timestamp: Date.now(),
-      data
-    }]);
-  };
-
-  const clearHistory = () => {
-    if (socket) {
-      socket.emit('voice:clear-history');
-    }
-    setMessages([]);
-  };
-
-  const formatTime = (timestamp) => {
-    return new Date(timestamp).toLocaleTimeString('es-ES', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
-
-  const hasVoiceSupport = 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window;
-
-  return (
-    <div className="flex flex-col h-full bg-gray-900">
-      {/* Header */}
-      <div className="bg-gray-800 p-4 border-b border-gray-700">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <span className="text-2xl">🎤</span>
-            <div>
-              <h3 className="text-lg font-bold text-white">Control por Voz</h3>
-              <p className="text-xs text-gray-400">
-                {hasVoiceSupport ? 'Presiona el micrófono o escribe' : 'Solo modo texto'}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center space-x-2">
-            {/* Toggle de voz */}
-            <button
-              onClick={() => setVoiceEnabled(!voiceEnabled)}
-              className={`p-2 rounded-lg transition-all ${
-                voiceEnabled
-                  ? 'bg-green-600 text-white'
-                  : 'bg-gray-700 text-gray-400'
-              }`}
-              title={voiceEnabled ? 'Voz habilitada' : 'Voz deshabilitada'}
-            >
-              🔊
-            </button>
-
-            {/* Limpiar historial */}
-            <button
-              onClick={clearHistory}
-              className="p-2 bg-gray-700 text-gray-400 rounded-lg hover:bg-gray-600 transition-all"
-              title="Limpiar historial"
-            >
-              🗑️
-            </button>
+  if (!supported) {
+    return (
+      <div className="bg-red-900/20 border border-red-500 rounded-lg p-4">
+        <div className="flex items-center gap-3">
+          <span className="text-2xl">�</span>
+          <div>
+            <h3 className="font-bold text-red-400">Voice Control No Disponible</h3>
+            <p className="text-sm text-red-300">
+              Tu navegador no soporta reconocimiento de voz.
+              Prueba con Chrome, Edge o Safari.
+            </p>
           </div>
         </div>
       </div>
+    );
+  }
 
-      {/* Chat messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 custom-scrollbar">
-        {messages.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-6xl mb-4">🎤</p>
-            <p className="text-xl text-white mb-2">Di "Hola JARVIS"</p>
-            <p className="text-sm text-gray-400 mb-4">
-              O escribe cualquier comando
+  if (!enabled) {
+    return null;
+  }
+
+  return (
+    <div className="bg-gradient-to-r from-purple-900/30 to-blue-900/30 border border-purple-500/50 rounded-lg p-4">
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-3">
+          <div className={`text-3xl ${isListening ? 'animate-pulse' : ''}`}>
+            {isListening ? '<�' : '='}
+          </div>
+          <div>
+            <h3 className="font-bold text-purple-300">JARVIS Voice Control</h3>
+            <p className="text-xs text-gray-400">
+              Di "JARVIS" seguido de tu comando
             </p>
-            <div className="space-y-1 text-xs text-gray-500 max-w-md mx-auto text-left">
-              <p>💡 Ejemplos de comandos:</p>
-              <p className="ml-4">• "Ejecuta crear un README"</p>
-              <p className="ml-4">• "Busca notification-system"</p>
-              <p className="ml-4">• "Documenta el proyecto"</p>
-              <p className="ml-4">• "Muestra las notificaciones"</p>
-              <p className="ml-4">• "Abre búsqueda"</p>
-            </div>
           </div>
-        )}
+        </div>
 
-        {messages.map((message, index) => (
-          <div
-            key={index}
-            className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-          >
-            <div
-              className={`max-w-[70%] rounded-lg p-3 ${
-                message.role === 'user'
-                  ? 'bg-cyan-600 text-white'
-                  : 'bg-gray-700 text-gray-100'
-              }`}
-            >
-              <div className="flex items-start space-x-2">
-                <span className="text-lg flex-shrink-0">
-                  {message.role === 'user' ? '👤' : '🤖'}
-                </span>
-                <div className="flex-1">
-                  <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                  {message.data?.suggestions && (
-                    <div className="mt-2 space-y-1">
-                      {message.data.suggestions.map((suggestion, i) => (
-                        <p key={i} className="text-xs text-gray-300 italic">
-                          {suggestion}
-                        </p>
-                      ))}
-                    </div>
-                  )}
-                  <p className="text-xs text-gray-400 mt-1">
-                    {formatTime(message.timestamp)}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        ))}
-
-        <div ref={messagesEndRef} />
+        <button
+          onClick={toggleListening}
+          className={`px-4 py-2 rounded-lg font-semibold transition-all ${
+            isListening
+              ? 'bg-red-600 hover:bg-red-700 text-white'
+              : 'bg-purple-600 hover:bg-purple-700 text-white'
+          }`}
+        >
+          {isListening ? '=� Detener' : '<� Escuchar'}
+        </button>
       </div>
 
-      {/* Input area */}
-      <div className="bg-gray-800 p-4 border-t border-gray-700">
-        {isListening && (
-          <div className="mb-3 bg-red-500 bg-opacity-20 border border-red-500 rounded-lg p-3 flex items-center space-x-3">
-            <div className="flex space-x-1">
-              <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-              <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse delay-100"></div>
-              <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse delay-200"></div>
+      {/* Live Transcript */}
+      {isListening && transcript && (
+        <div className="bg-black/30 rounded p-3 mb-3 border border-purple-500/30">
+          <div className="text-xs text-gray-400 mb-1">Escuchando...</div>
+          <div className="text-purple-300 font-mono">{transcript}</div>
+          {confidence > 0 && (
+            <div className="mt-2 flex items-center gap-2">
+              <span className="text-xs text-gray-400">Confianza:</span>
+              <div className="flex-1 bg-gray-700 rounded-full h-2">
+                <div
+                  className="bg-purple-500 h-2 rounded-full transition-all"
+                  style={{ width: `${confidence * 100}%` }}
+                />
+              </div>
+              <span className="text-xs text-purple-400">{Math.round(confidence * 100)}%</span>
             </div>
-            <span className="text-red-400 text-sm font-medium">Escuchando...</span>
-          </div>
-        )}
-
-        {transcript && (
-          <div className="mb-3 bg-cyan-500 bg-opacity-20 border border-cyan-500 rounded-lg p-2">
-            <p className="text-cyan-400 text-sm">Reconocido: "{transcript}"</p>
-          </div>
-        )}
-
-        <form onSubmit={handleTextSubmit} className="flex space-x-2">
-          {hasVoiceSupport && (
-            <button
-              type="button"
-              onClick={isListening ? stopListening : startListening}
-              disabled={isSpeaking}
-              className={`px-4 py-3 rounded-lg font-semibold transition-all ${
-                isListening
-                  ? 'bg-red-600 text-white hover:bg-red-700'
-                  : isSpeaking
-                  ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                  : 'bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700'
-              }`}
-            >
-              {isListening ? '🎙️ Escuchando' : isSpeaking ? '🔊 Hablando' : '🎤 Hablar'}
-            </button>
           )}
+        </div>
+      )}
 
-          <input
-            type="text"
-            value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
-            placeholder="Escribe un comando o pregunta..."
-            className="flex-1 bg-gray-700 text-white px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-cyan-500"
-            disabled={isListening}
-          />
+      {/* Last Command */}
+      {lastCommand && (
+        <div className="bg-green-900/20 border border-green-500/30 rounded p-3">
+          <div className="text-xs text-gray-400 mb-1">�ltimo comando ejecutado:</div>
+          <div className="text-green-300 font-semibold">{lastCommand}</div>
+        </div>
+      )}
 
-          <button
-            type="submit"
-            disabled={!inputText.trim() || isListening}
-            className={`px-6 py-3 rounded-lg font-semibold transition-all ${
-              !inputText.trim() || isListening
-                ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                : 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white hover:from-cyan-700 hover:to-blue-700'
-            }`}
-          >
-            Enviar
-          </button>
-        </form>
-
-        {isSpeaking && (
-          <button
-            onClick={stopSpeaking}
-            className="mt-2 w-full py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-all text-sm"
-          >
-            ⏹️ Detener Voz
-          </button>
-        )}
+      {/* Voice Commands Help */}
+      <div className="mt-4 pt-4 border-t border-purple-500/30">
+        <div className="text-xs text-gray-400 mb-2">Comandos disponibles:</div>
+        <div className="grid grid-cols-2 gap-2 text-xs">
+          <div className="bg-black/20 rounded p-2">
+            <span className="text-purple-400 font-semibold">JARVIS, test</span>
+            <p className="text-gray-500">Prueba el sistema de IA</p>
+          </div>
+          <div className="bg-black/20 rounded p-2">
+            <span className="text-purple-400 font-semibold">JARVIS, predict</span>
+            <p className="text-gray-500">Genera predicciones</p>
+          </div>
+          <div className="bg-black/20 rounded p-2">
+            <span className="text-purple-400 font-semibold">JARVIS, save</span>
+            <p className="text-gray-500">Guarda el estado</p>
+          </div>
+          <div className="bg-black/20 rounded p-2">
+            <span className="text-purple-400 font-semibold">JARVIS, status</span>
+            <p className="text-gray-500">Muestra el estado</p>
+          </div>
+        </div>
       </div>
     </div>
   );

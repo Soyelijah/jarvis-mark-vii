@@ -17,6 +17,8 @@ import CommandPalette from './components/CommandPalette';
 import ProactiveAlerts from './components/ProactiveAlerts';
 import LearningAnalytics from './components/LearningAnalytics';
 import AutonomousDashboard from './components/AutonomousDashboard';
+import AIBrain from './components/AIBrain';
+import MasterControl from './components/MasterControl';
 
 function App() {
   const [socket, setSocket] = useState(null);
@@ -168,11 +170,13 @@ function App() {
       <nav className="bg-gray-800 border-b border-gray-700 shadow">
         <div className="container mx-auto p-2 flex gap-2">
           {[
+            { id: 'master', label: '⚙️ Master Control', icon: '⚙️' },
             { id: 'chat', label: '💬 Chat', icon: '💬' },
+            { id: 'aibrain', label: '🧠 AI Brain', icon: '🧠' },
             { id: 'dashboard', label: '📊 Dashboard', icon: '📊' },
             { id: 'autonomous', label: '🤖 Autonomous', icon: '🤖' },
             { id: 'proactive', label: '⚡ Proactive', icon: '⚡' },
-            { id: 'learning', label: '🧠 Learning', icon: '🧠' },
+            { id: 'learning', label: '📚 Learning', icon: '📚' },
             { id: 'monitor', label: '📡 Monitor', icon: '📡' },
             { id: 'terminal', label: '🖥️ Terminal', icon: '🖥️' },
             { id: 'memories', label: '📝 Memorias', icon: '📝' },
@@ -196,8 +200,14 @@ function App() {
 
       {/* Main Content */}
       <main className="container mx-auto p-6 pb-32">
+        {activePanel === 'master' && (
+          <MasterControl />
+        )}
         {activePanel === 'chat' && (
           <ChatPanel socket={socket} connected={connected} />
+        )}
+        {activePanel === 'aibrain' && (
+          <AIBrain />
         )}
         {activePanel === 'dashboard' && (
           <Dashboard data={data.dashboard} />

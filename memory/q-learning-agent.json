@@ -1,0 +1,26 @@
+{
+  "qTable": [
+    [
+      "simple:normal:intermediate:clear:greeting:quick_response",
+      0.15000000000000002
+    ]
+  ],
+  "stats": {
+    "totalSteps": 1,
+    "totalEpisodes": 0,
+    "totalReward": 1.5,
+    "averageReward": 1.5,
+    "explorationRate": 0.2994,
+    "learningRate": 0.1
+  },
+  "config": {
+    "learningRate": 0.1,
+    "discountFactor": 0.95,
+    "explorationRate": 0.3,
+    "explorationDecay": 0.998,
+    "minExplorationRate": 0.01,
+    "replayBufferSize": 10000,
+    "batchSize": 32,
+    "targetUpdateFrequency": 100
+  }
+}

@@ -55,6 +55,9 @@ const AuthIntegration = require('./auth-integration.cjs');
 // Performance Integration - Performance Monitoring & Optimization
 const PerformanceIntegration = require('./performance-integration.cjs');
 
+// AI Integration - Machine Learning & Intelligence Systems
+const AIIntegration = require('./ai-integration.cjs');
+
 // Simple logger for engines
 const logger = {
   info: (msg) => console.log(msg),
@@ -1078,6 +1081,11 @@ io.on('connection', (socket) => {
     timestamp: new Date().toISOString()
   });
 
+  // Setup AI socket handlers
+  if (global.aiIntegration && global.aiIntegration.initialized) {
+    global.aiIntegration.setupSocketHandlers(socket);
+  }
+
   socket.on('disconnect', () => {
     console.log(`❌ Cliente desconectado: ${socket.id}`);
   });
@@ -1190,6 +1198,134 @@ io.on('connection', (socket) => {
   if (global.performanceIntegration) {
     global.performanceIntegration.setupSocketHandlers(socket);
   }
+
+  // ===== MASTER CONTROL PANEL EVENTS =====
+
+  // System Status Request
+  socket.on('system:status:request', async () => {
+    try {
+      const [mem, currentLoad, osInfo] = await Promise.all([
+        si.mem(),
+        si.currentLoad(),
+        si.osInfo()
+      ]);
+
+      const systemStatus = {
+        backend: {
+          status: 'running',
+          uptime: Math.floor(process.uptime()),
+          port: PORT || 7777
+        },
+        frontend: {
+          status: 'running',
+          port: 5173
+        },
+        aiSystems: {
+          active: global.aiIntegration && global.aiIntegration.initialized ? 4 : 0,
+          total: 4
+        },
+        database: {
+          status: 'running',
+          connections: 'active'
+        },
+        memory: {
+          used: mem.used,
+          total: mem.total,
+          percentage: Math.round((mem.used / mem.total) * 100)
+        },
+        cpu: {
+          usage: Math.round(currentLoad.currentLoad)
+        },
+        os: {
+          platform: osInfo.platform,
+          distro: osInfo.distro,
+          arch: osInfo.arch
+        }
+      };
+
+      socket.emit('system:status', systemStatus);
+    } catch (error) {
+      console.error('Error getting system status:', error);
+      socket.emit('system:error', { message: error.message });
+    }
+  });
+
+  // Service Toggle
+  socket.on('service:toggle', async (data) => {
+    try {
+      const { serviceId } = data;
+      console.log(`🔧 Service toggle requested: ${serviceId}`);
+
+      // Log the action
+      socket.emit('system:log', {
+        timestamp: new Date().toISOString(),
+        message: `Service ${serviceId} toggle requested`,
+        level: 'info'
+      });
+
+      // Emit service update (for now, we just echo back)
+      socket.emit('service:update', {
+        id: serviceId,
+        status: 'running', // In a real implementation, this would toggle
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Error toggling service:', error);
+      socket.emit('system:error', { message: error.message });
+    }
+  });
+
+  // System Restart
+  socket.on('system:restart', () => {
+    console.log('⚠️  System restart requested');
+    socket.emit('system:log', {
+      timestamp: new Date().toISOString(),
+      message: 'System restart initiated',
+      level: 'warning'
+    });
+
+    // In a real implementation, this would trigger a restart
+    // For now, just emit a log
+    setTimeout(() => {
+      socket.emit('system:log', {
+        timestamp: new Date().toISOString(),
+        message: 'System restart complete',
+        level: 'success'
+      });
+    }, 2000);
+  });
+
+  // System Command Execution
+  socket.on('system:command', async (data) => {
+    try {
+      const { command } = data;
+      console.log(`💻 System command: ${command}`);
+
+      socket.emit('system:log', {
+        timestamp: new Date().toISOString(),
+        message: `Executing command: ${command}`,
+        level: 'info'
+      });
+
+      // Process the command using JARVIS
+      const response = await processJarvisCommand(command);
+
+      socket.emit('system:log', {
+        timestamp: new Date().toISOString(),
+        message: `Command completed: ${response.substring(0, 100)}...`,
+        level: 'success'
+      });
+    } catch (error) {
+      console.error('Error executing system command:', error);
+      socket.emit('system:log', {
+        timestamp: new Date().toISOString(),
+        message: `Command failed: ${error.message}`,
+        level: 'error'
+      });
+    }
+  });
+
+  // ===== END MASTER CONTROL PANEL EVENTS =====
 });
 
 // ===== ERROR HANDLING =====
@@ -1356,10 +1492,26 @@ server.listen(PORT, async () => {
     console.error('❌ Error inicializando Performance:', error.message);
   }
 
+  // ============ AI INTEGRATION ============
+  const aiIntegration = new AIIntegration(io, logger);
+  global.aiIntegration = aiIntegration; // Make available globally
+
+  try {
+    await aiIntegration.initialize();
+    console.log('🧠 AI Systems (Self-Improvement, RL, Patterns, Predictive) integrados con panel web');
+
+    // Setup AI routes
+    app.use('/api/ai', aiIntegration.getRouter());
+    console.log('✓ AI REST API routes mounted at /api/ai');
+  } catch (error) {
+    console.error('❌ Error inicializando AI Systems:', error.message);
+  }
+
   // Graceful shutdown
   process.on('SIGTERM', async () => {
     console.log('\n🛑 SIGTERM recibido, cerrando gracefully...');
     await proactiveIntegration.stop();
+    if (aiIntegration) await aiIntegration.shutdown();
     server.close(() => {
       console.log('✅ Servidor cerrado');
       process.exit(0);

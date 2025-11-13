@@ -1,0 +1,16 @@
+{
+  "userId": "web-user",
+  "globalStats": {
+    "totalInteractions": 0,
+    "successfulInteractions": 0,
+    "totalPredictions": 0,
+    "accuratePredictions": 0,
+    "patternsDetected": 0,
+    "resourcesPrepared": 0,
+    "resourcesUsed": 0,
+    "averageResponseTime": 0,
+    "learningIterations": 4
+  },
+  "interactionHistory": [],
+  "timestamp": 1762996493419
+}

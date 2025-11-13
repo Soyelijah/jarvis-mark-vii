@@ -1,0 +1,24 @@
+{
+  "userId": "web-user",
+  "events": [
+    {
+      "id": "1762920135494-cz781bqpr",
+      "userId": "web-user",
+      "type": "interaction",
+      "action": "user_input",
+      "target": "jarvis",
+      "data": {
+        "input": "Hola JARVIS",
+        "context": {
+          "domain": "greeting"
+        }
+      },
+      "timestamp": 1762920135494,
+      "sessionId": "1762920116330-rrl1eevyb",
+      "duration": 0
+    }
+  ],
+  "sessions": [],
+  "patterns": [],
+  "preferences": {}
+}
