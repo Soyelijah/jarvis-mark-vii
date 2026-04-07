@@ -1,0 +1,118 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==========================================
+// USER & SECURITY
+// ==========================================
+
+model User {
+  id            String      @id @default(cuid())
+  username      String      @unique
+  email         String      @unique
+  passwordHash  String
+  role          Role        @default(VIEWER)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  
+  // Relations
+  memories      Memory[]
+  sessions      Session[]
+  auditLogs     AuditLog[]
+}
+
+enum Role {
+  ADMIN
+  OPERATOR
+  VIEWER
+}
+
+model Session {
+  id          String   @id @default(cuid())
+  userId      String
+  token       String   @unique
+  ipAddress   String?
+  userAgent   String?
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+  
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  userId      String?
+  action      String
+  resource    String
+  details     Json?
+  ipAddress   String?
+  timestamp   DateTime @default(now())
+  
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+}
+
+// ==========================================
+// NEURAL MEMORY SYSTEM
+// ==========================================
+
+model Memory {
+  id          String   @id @default(cuid())
+  type        MemoryType
+  content     Json
+  context     Json?
+  importance  Float    @default(0.5)
+  embedding   Float[]  // Vector for semantic search (requires pgvector in prod, or managed via Pinecone)
+  createdAt   DateTime @default(now())
+  expiresAt   DateTime?
+  userId      String
+  
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([type])
+  @@index([userId])
+}
+
+enum MemoryType {
+  WORKING
+  SHORT_TERM
+  LONG_TERM
+  EPISODIC
+}
+
+// ==========================================
+// METRICS & ANALYTICS
+// ==========================================
+
+model MetricSnapshot {
+  id          String   @id @default(cuid())
+  type        String   // e.g., 'system', 'ai', 'business'
+  data        Json
+  timestamp   DateTime @default(now())
+  
+  @@index([type, timestamp])
+}
+
+// ==========================================
+// AI PATTERNS
+// ==========================================
+
+model LearnedPattern {
+  id          String   @id @default(cuid())
+  patternHash String   @unique
+  category    String
+  description String
+  confidence  Float    @default(0.1)
+  occurrences Int      @default(1)
+  firstSeen   DateTime @default(now())
+  lastSeen    DateTime @default(now())
+  
+  @@index([category])
+}
