@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="jest tests" tests="20" failures="0" errors="0" time="0.303">
+  <testsuite name="MemoryRepository" errors="0" failures="0" skipped="0" timestamp="2026-04-07T22:52:19" time="0.159" tests="9">
+    <testcase classname="MemoryRepository › save()" name="debe crear un recuerdo con los campos correctos" time="0.006">
+    </testcase>
+    <testcase classname="MemoryRepository › save()" name="debe usar importance=0.5 por defecto" time="0.001">
+    </testcase>
+    <testcase classname="MemoryRepository › findByUser()" name="debe retornar memorias del usuario ordenadas por importancia" time="0.002">
+    </testcase>
+    <testcase classname="MemoryRepository › findByUser()" name="debe filtrar memorias expiradas" time="0.002">
+    </testcase>
+    <testcase classname="MemoryRepository › purgeExpired()" name="debe eliminar memorias expiradas y retornar el conteo" time="0.015">
+    </testcase>
+    <testcase classname="MemoryRepository › consolidate()" name="debe promover memorias SHORT_TERM con importancia &gt;= umbral a LONG_TERM" time="0.008">
+    </testcase>
+    <testcase classname="MemoryRepository › updateImportance()" name="debe actualizar la importancia sin exceder 1.0" time="0.002">
+    </testcase>
+    <testcase classname="MemoryRepository › updateImportance()" name="debe retornar null si el recuerdo no existe" time="0.001">
+    </testcase>
+    <testcase classname="MemoryRepository › getStats()" name="debe retornar estadísticas correctas por tipo" time="0.002">
+    </testcase>
+  </testsuite>
+  <testsuite name="Redis Client Enterprise" errors="0" failures="0" skipped="0" timestamp="2026-04-07T22:52:19" time="0.052" tests="11">
+    <testcase classname="Redis Client Enterprise › AI Cache" name="getAICache debe retornar null si no hay caché" time="0.002">
+    </testcase>
+    <testcase classname="Redis Client Enterprise › AI Cache" name="getAICache debe retornar el valor cacheado parseado" time="0.003">
+    </testcase>
+    <testcase classname="Redis Client Enterprise › AI Cache" name="setAICache debe guardar la respuesta con TTL" time="0.003">
+    </testcase>
+    <testcase classname="Redis Client Enterprise › Rate Limiting" name="debe permitir la petición si está dentro del límite" time="0.002">
+    </testcase>
+    <testcase classname="Redis Client Enterprise › Rate Limiting" name="debe bloquear la petición si excede el límite" time="0.003">
+    </testcase>
+    <testcase classname="Redis Client Enterprise › Session Store" name="setSession debe guardar la sesión con TTL por defecto" time="0.001">
+    </testcase>
+    <testcase classname="Redis Client Enterprise › Session Store" name="getSession debe retornar los datos de sesión" time="0.002">
+    </testcase>
+    <testcase classname="Redis Client Enterprise › Session Store" name="getSession debe retornar null si la sesión no existe" time="0.005">
+    </testcase>
+    <testcase classname="Redis Client Enterprise › Session Store" name="deleteSession debe eliminar la clave de sesión" time="0.001">
+    </testcase>
+    <testcase classname="Redis Client Enterprise › Health Check" name="debe retornar true si Redis responde PONG" time="0.001">
+    </testcase>
+    <testcase classname="Redis Client Enterprise › Health Check" name="debe retornar false si Redis no está disponible" time="0.001">
+    </testcase>
+  </testsuite>
+</testsuites>

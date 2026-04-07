@@ -1,0 +1,190 @@
+name: Sprint 1 — Persistence Layer CI
+
+# Este workflow valida la capa de persistencia enterprise del Sprint 1:
+# - Prisma schema validation
+# - Database migration tests
+# - Redis integration tests
+# - Vector search tests
+
+on:
+  push:
+    branches:
+      - 'enterprise/**'
+      - master
+      - main
+  pull_request:
+    branches:
+      - master
+      - main
+
+env:
+  NODE_VERSION: '22.x'
+  DATABASE_URL: postgresql://jarvis:jarvis-test@localhost:5432/jarvis_test
+  REDIS_URL: redis://localhost:6379
+
+jobs:
+  # ==========================================
+  # JOB 1: Prisma Schema Validation
+  # ==========================================
+  prisma-validate:
+    name: Prisma Schema & Migration Validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: jarvis
+          POSTGRES_PASSWORD: jarvis-test
+          POSTGRES_DB: jarvis_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Validate Prisma Schema
+        run: npx prisma validate
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: Run Database Migrations
+        run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+
+      - name: Verify Schema Integrity
+        run: |
+          node -e "
+            const { PrismaClient } = require('@prisma/client');
+            const prisma = new PrismaClient();
+            async function check() {
+              await prisma.\$connect();
+              console.log('✅ Prisma conectado a PostgreSQL');
+              const tables = await prisma.\$queryRaw\`SELECT tablename FROM pg_tables WHERE schemaname='public'\`;
+              console.log('📋 Tablas:', tables.map(t => t.tablename).join(', '));
+              await prisma.\$disconnect();
+            }
+            check().catch(e => { console.error(e); process.exit(1); });
+          "
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+
+  # ==========================================
+  # JOB 2: Repository Layer Tests
+  # ==========================================
+  repository-tests:
+    name: Repository Layer Unit Tests
+    runs-on: ubuntu-latest
+    needs: prisma-validate
+    timeout-minutes: 15
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: jarvis
+          POSTGRES_PASSWORD: jarvis-test
+          POSTGRES_DB: jarvis_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: Run Migrations
+        run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+
+      - name: Run Repository Tests
+        run: npx jest --testPathPattern="database|repository|cache|vector" --passWithNoTests --ci --coverage
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+          REDIS_URL: ${{ env.REDIS_URL }}
+
+      - name: Upload Coverage
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-persistence
+          path: coverage/
+          retention-days: 7
+
+  # ==========================================
+  # JOB 3: Security Audit
+  # ==========================================
+  security-audit:
+    name: Security Audit (Sprint 1 Dependencies)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run npm audit
+        run: npm audit --audit-level=high
+        continue-on-error: true
+
+      - name: Check for secrets in code
+        run: |
+          if grep -rn "changeme\|password123\|secret123" --include="*.cjs" --include="*.js" core/database/ core/cache/ core/vector/ 2>/dev/null; then
+            echo "::error::Hardcoded secrets found in persistence layer"
+            exit 1
+          fi
+          echo "✅ No hardcoded secrets found"
